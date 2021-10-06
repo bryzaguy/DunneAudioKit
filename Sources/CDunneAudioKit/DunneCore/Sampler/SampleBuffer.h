@@ -14,25 +14,35 @@ namespace DunneCore
         int channelCount;
         int sampleCount;
         float startPoint, endPoint;
-        bool isLooping;
+        bool isLooping, isInterleaved;
         float loopStartPoint, loopEndPoint;
         float noteFrequency;
         
         SampleBuffer();
         ~SampleBuffer();
         
-        void init(float sampleRate, int channelCount, int sampleCount);
+        void init(float sampleRate, int channelCount, int sampleCount, bool isInterleaved);
         void deinit();
         
-        void setData(unsigned index, float data);
+        inline int realIndex(int intendedIndex) {
+            if (isInterleaved && channelCount > 1)
+            {
+                return ((intendedIndex % sampleCount) * 2) + (intendedIndex >= channelCount ? 1 : 0);
+            }
+            else
+            {
+                return intendedIndex;
+            }
+        }
         
         // Use double for the real-valued index, because oscillators will need the extra precision.
         inline float interp(double fIndex, float gain)
         {
             if (samples == 0 || sampleCount == 0) return 0.0f;
             
-            int ri = int(fIndex);
-            double f = fIndex - ri;
+            int pIndex = int(fIndex);
+            double f = fIndex - pIndex;
+            int ri = realIndex(pIndex);
             int rj = ri + 1;
             
             float si = ri < sampleCount ? samples[ri] : 0.0f;
@@ -53,8 +63,9 @@ namespace DunneCore
                 return;
             }
             
-            int ri = int(fIndex);
-            double f = fIndex - ri;
+            int pIndex = int(fIndex);
+            double f = fIndex - pIndex;
+            int ri = realIndex(pIndex);
             int rj = ri + 1;
             
             float si = ri < sampleCount ? samples[ri] : 0.0f;

@@ -121,17 +121,8 @@ void CoreSampler::loadSampleData(SampleDataDescriptor& sdd)
     pBuf->maximumVelocity = sdd.sampleDescriptor.maximumVelocity;
     data->sampleBufferList.push_back(pBuf);
     
-    pBuf->init(sdd.sampleRate, sdd.channelCount, sdd.sampleCount);
-    float *pData = sdd.data;
-    if (sdd.isInterleaved) for (int i=0; i < sdd.sampleCount; i++)
-    {
-        pBuf->setData(i, *pData++);
-        if (sdd.channelCount > 1) pBuf->setData(sdd.sampleCount + i, *pData++);
-    }
-    else for (int i=0; i < sdd.channelCount * sdd.sampleCount; i++)
-    {
-        pBuf->setData(i, *pData++);
-    }
+    pBuf->init(sdd.sampleRate, sdd.channelCount, sdd.sampleCount, sdd.isInterleaved);
+    pBuf->samples = sdd.data;
     pBuf->noteNumber = sdd.sampleDescriptor.noteNumber;
     pBuf->noteFrequency = sdd.sampleDescriptor.noteFrequency;
     
