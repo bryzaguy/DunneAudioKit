@@ -22,13 +22,21 @@ namespace DunneCore
         tempGain = 0.0f;
     }
 
-    void SamplerVoice::start(unsigned note, float sampleRate, float frequency, float volume, SampleBuffer *buffer)
+    void SamplerVoice::start(unsigned note, float sampleRate, float frequency, float volume, std::list<SampleBuffer*> buffers)
     {
-        sampleBuffer = buffer;
-        oscillator.indexPoint = buffer->startPoint;
+        start(note, sampleRate, frequency, volume, this->currentLoop, buffers);
+    }
+
+    void SamplerVoice::start(unsigned note, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers)
+    {
+        sampleBuffers = buffers;
+        currentLoop = loop;
+
+        auto buffer = buffers.front();
+        oscillator.indexPoint = loop.loopStartPoint;
         oscillator.increment = (buffer->sampleRate / sampleRate) * (frequency / buffer->noteFrequency);
         oscillator.multiplier = 1.0;
-        oscillator.isLooping = buffer->isLooping;
+        oscillator.isLooping = loop.isLooping;
         
         noteVolume = volume;
         ampEnvelope.start();
@@ -57,12 +65,18 @@ namespace DunneCore
 
         restartVoiceLFOIfNeeded();
     }
-    
-    void SamplerVoice::restartNewNote(unsigned note, float sampleRate, float frequency, float volume, SampleBuffer *buffer)
+
+    void SamplerVoice::restartNewNote(unsigned note, float sampleRate, float frequency, float volume, std::list<SampleBuffer*> buffers)
+    {
+        restartNewNote(note, sampleRate, frequency, volume, this->currentLoop, buffers);
+    }
+
+    void SamplerVoice::restartNewNote(unsigned note, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers)
     {
         samplingRate = sampleRate;
         leftFilter.updateSampleRate(double(samplingRate));
         rightFilter.updateSampleRate(double(samplingRate));
+        auto sampleBuffer = sampleBuffers.front();
 
         oscillator.increment = (sampleBuffer->sampleRate / sampleRate) * (frequency / sampleBuffer->noteFrequency);
         glideSemitones = 0.0f;
@@ -80,7 +94,8 @@ namespace DunneCore
         noteFrequency = frequency;
         noteNumber = note;
         tempNoteVolume = noteVolume;
-        newSampleBuffer = buffer;
+        newSampleBuffers = buffers;
+        nextLoop = loop;
         ampEnvelope.restart();
         noteVolume = volume;
         filterEnvelope.restart();
@@ -93,6 +108,7 @@ namespace DunneCore
         samplingRate = sampleRate;
         leftFilter.updateSampleRate(double(samplingRate));
         rightFilter.updateSampleRate(double(samplingRate));
+        auto sampleBuffer = sampleBuffers.front();
 
         oscillator.increment = (sampleBuffer->sampleRate / sampleRate) * (frequency / sampleBuffer->noteFrequency);
         glideSemitones = 0.0f;
@@ -106,10 +122,11 @@ namespace DunneCore
         noteNumber = note;
     }
 
-    void SamplerVoice::restartSameNote(float volume, SampleBuffer *buffer)
+    void SamplerVoice::restartSameNote(float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers)
     {
         tempNoteVolume = noteVolume;
-        newSampleBuffer = buffer;
+        newSampleBuffers = buffers;
+        nextLoop = loop;
         ampEnvelope.restart();
         noteVolume = volume;
         filterEnvelope.restart();
@@ -152,10 +169,12 @@ namespace DunneCore
             {
                 tempGain = masterVolume * noteVolume;
                 volumeRamper.reinit(ampEnvelope.getSample(), sampleCount);
-                sampleBuffer = newSampleBuffer;
+                sampleBuffers = newSampleBuffers;
+                currentLoop = nextLoop;
+                auto sampleBuffer = sampleBuffers.front();
                 oscillator.increment = (sampleBuffer->sampleRate / samplingRate) * (noteFrequency / sampleBuffer->noteFrequency);
-                oscillator.indexPoint = sampleBuffer->startPoint;
-                oscillator.isLooping = sampleBuffer->isLooping;
+                oscillator.indexPoint = nextLoop.loopStartPoint;
+                oscillator.isLooping = nextLoop.isLooping;
             }
         }
         else
@@ -215,7 +234,7 @@ namespace DunneCore
         {
             float gain = tempGain * volumeRamper.getNextValue();
             float leftSample, rightSample;
-            if (oscillator.getSamplePair(sampleBuffer, sampleCount, &leftSample, &rightSample, gain))
+            if (oscillator.getSamplePair(sampleBuffers, currentLoop, sampleCount, &leftSample, &rightSample, gain))
                 return true;
             if (isFilterEnabled)
             {

@@ -541,8 +541,9 @@ public class Sampler: Node {
     ///   - channel: MIDI Channel
     public func play(noteNumber: MIDINoteNumber,
                      velocity: MIDIVelocity,
-                     channel: MIDIChannel = 0) {
-        akSamplerPlayNote(au.dsp, noteNumber, velocity)
+                     loop: LoopDescriptor,
+                     offset: Int64) {
+        akSamplerPlayNote(au.dsp, noteNumber, velocity, loop, offset)
     }
 
     /// Stop the sampler playback of a specific note

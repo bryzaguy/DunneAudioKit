@@ -2,7 +2,9 @@
 
 #pragma once
 #include <math.h>
+#include <list>
 
+#include "Sampler_Typedefs.h"
 #include "SampleBuffer.h"
 
 namespace DunneCore
@@ -33,16 +35,26 @@ namespace DunneCore
         }
         
         // return true if we run out of samples
-        inline bool getSamplePair(SampleBuffer *sampleBuffer, int sampleCount, float *leftOutput, float *rightOutput, float gain)
+        inline bool getSamplePair(std::list<SampleBuffer*> sampleBuffers, LoopDescriptor loop, int sampleCount, float *leftOutput, float *rightOutput, float gain)
         {
+            auto sampleBuffer = sampleBuffers.front();
+            auto loopEndPoint = loop.loopEndPoint == 0 ? sampleBuffer->loopEndPoint : loop.loopEndPoint;
             if (sampleBuffer == NULL || indexPoint > sampleBuffer->endPoint) return true;
-            sampleBuffer->interp(indexPoint, leftOutput, rightOutput, gain);
+            
+            *leftOutput = 0;
+            *rightOutput = 0;
+            for (const auto buffer : sampleBuffers) {
+                float left = 0, right = 0;
+                buffer->interp(indexPoint, &left, &right, gain);
+                *leftOutput += left;
+                *rightOutput += right;
+            }
             
             indexPoint += multiplier * increment;
-            if (sampleBuffer->isLooping && isLooping)
+            if (loop.isLooping && isLooping)
             {
-                if (indexPoint > sampleBuffer->loopEndPoint)
-                    indexPoint = indexPoint - sampleBuffer->loopEndPoint + sampleBuffer->loopStartPoint;
+                if (indexPoint > loopEndPoint)
+                    indexPoint = indexPoint - loopEndPoint + loop.loopStartPoint;
             }
             return false;
         }

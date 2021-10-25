@@ -2,7 +2,9 @@
 
 #pragma once
 #include <math.h>
+#include <list>
 
+#include "Sampler_Typedefs.h"
 #include "SampleBuffer.h"
 #include "SampleOscillator.h"
 #include "ADSREnvelope.h"
@@ -24,8 +26,9 @@ namespace DunneCore
         SampleOscillator oscillator;
 
         /// a pointer to the sample buffer for that oscillator
-        SampleBuffer *sampleBuffer;
-
+        std::list<SampleBuffer*> sampleBuffers;
+        LoopDescriptor currentLoop;
+        
         /// two filters (left/right)
         ResonantLowPassFilter leftFilter, rightFilter;
         AHDSHREnvelope ampEnvelope;
@@ -64,7 +67,8 @@ namespace DunneCore
         float tempNoteVolume;
 
         /// Next sample buffer to use at restart
-        SampleBuffer *newSampleBuffer;
+        std::list<SampleBuffer*> newSampleBuffers;
+        LoopDescriptor nextLoop;
 
         /// product of global volume, note volume
         float tempGain;
@@ -87,10 +91,17 @@ namespace DunneCore
                    float sampleRate,
                    float frequency,
                    float volume,
-                   SampleBuffer *sampleBuffer);
-        void restartNewNote(unsigned noteNumber, float sampleRate, float frequency, float volume, SampleBuffer *buffer);
+                   std::list<SampleBuffer*> sampleBuffers);
+        void restartNewNote(unsigned noteNumber, float sampleRate, float frequency, float volume, std::list<SampleBuffer*> buffers);
+        void start(unsigned noteNumber,
+                   float sampleRate,
+                   float frequency,
+                   float volume,
+                   LoopDescriptor loop,
+                   std::list<SampleBuffer*> sampleBuffers);
+        void restartNewNote(unsigned noteNumber, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers);
         void restartNewNoteLegato(unsigned noteNumber, float sampleRate, float frequency);
-        void restartSameNote(float volume, SampleBuffer *sampleBuffer);
+        void restartSameNote(float volume, LoopDescriptor loop, std::list<SampleBuffer*> sampleBuffers);
         void release(bool loopThruRelease);
         void stop();
         

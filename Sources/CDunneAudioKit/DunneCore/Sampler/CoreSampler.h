@@ -9,6 +9,9 @@
 #import <memory>
 #endif
 
+#import <list>
+#include "SampleBuffer.h"
+
 // process samples in "chunks" this size
 #define CORESAMPLER_CHUNKSIZE 16
 
@@ -54,7 +57,7 @@ public:
     /// optionally call this to make samples continue looping after note-release
     void setLoopThruRelease(bool value) { loopThruRelease = value; }
     
-    void playNote(unsigned noteNumber, unsigned velocity);
+    void playNote(unsigned noteNumber, unsigned velocity, LoopDescriptor loop, int64_t offset);
     void stopNote(unsigned noteNumber, bool immediate);
     void sustainPedal(bool down);
     
@@ -153,10 +156,12 @@ protected:
     
     // helper functions
     DunneCore::SamplerVoice *voicePlayingNote(unsigned noteNumber);
-    DunneCore::KeyMappedSampleBuffer *lookupSample(unsigned noteNumber, unsigned velocity);
+    std::list<DunneCore::SampleBuffer*> lookupSamples(unsigned noteNumber, unsigned velocity, LoopDescriptor loop);
     void play(unsigned noteNumber,
               unsigned velocity,
-              bool anotherKeyWasDown);
+              bool anotherKeyWasDown,
+              LoopDescriptor loop,
+              int64_t offset);
     void stop(unsigned noteNumber, bool immediate);
 };
 

@@ -6,6 +6,14 @@
 
 typedef struct
 {
+    bool isLooping;
+    unsigned int loopStartPoint, loopEndPoint, *enabledTracks;
+    int enabledTracksCount;
+
+} LoopDescriptor;
+
+typedef struct
+{
     int noteNumber;
     float noteFrequency;
     

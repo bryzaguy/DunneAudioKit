@@ -57,7 +57,7 @@ AK_API void akSamplerSetNoteFrequency(DSPRef pDSP, int noteNumber, float noteFre
 AK_API void akSamplerBuildSimpleKeyMap(DSPRef pDSP);
 AK_API void akSamplerBuildKeyMap(DSPRef pDSP);
 AK_API void akSamplerSetLoopThruRelease(DSPRef pDSP, bool value);
-AK_API void akSamplerPlayNote(DSPRef pDSP, UInt8 noteNumber, UInt8 velocity);
+AK_API void akSamplerPlayNote(DSPRef pDSP, UInt8 noteNumber, UInt8 velocity, LoopDescriptor loop, int64_t offset);
 AK_API void akSamplerStopNote(DSPRef pDSP, UInt8 noteNumber, bool immediate);
 AK_API void akSamplerStopAllVoices(DSPRef pDSP);
 AK_API void akSamplerRestartVoices(DSPRef pDSP);

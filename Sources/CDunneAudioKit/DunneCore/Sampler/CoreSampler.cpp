@@ -149,24 +149,34 @@ void CoreSampler::loadSampleData(SampleDataDescriptor& sdd)
     }
 }
 
-DunneCore::KeyMappedSampleBuffer *CoreSampler::lookupSample(unsigned noteNumber, unsigned velocity)
+std::list<DunneCore::SampleBuffer*> CoreSampler::lookupSamples(unsigned noteNumber, unsigned velocity, LoopDescriptor loop)
 {
-    // common case: only one sample mapped to this note - return it immediately
-    if (data->keyMap[noteNumber].size() == 1)
-        return data->keyMap[noteNumber].front();
+    std::list<DunneCore::SampleBuffer*> result;
+    const auto buffers = data->keyMap[noteNumber];
+    bool enabled_tracks[buffers.size()];
+    memset(enabled_tracks, false, buffers.size() * sizeof(bool));
     
-    // search samples mapped to this note for best choice based on velocity
-    for (DunneCore::KeyMappedSampleBuffer *pBuf : data->keyMap[noteNumber])
-    {
-        // if sample does not have velocity range, accept it trivially
-        if (pBuf->minimumVelocity < 0 || pBuf->maximumVelocity < 0) return pBuf;
-        
-        // otherwise (common case), accept based on velocity
-        if ((int)velocity >= pBuf->minimumVelocity && (int)velocity <= pBuf->maximumVelocity) return pBuf;
+    for(int i = 0; i < loop.enabledTracksCount; i++) {
+        enabled_tracks[loop.enabledTracks[i]] = true;
     }
     
-    // return nil if no samples mapped to note (or sample velocities are invalid)
-    return 0;
+    // common case: only one sample mapped to this note - return it immediately
+    if (buffers.size() == 1 && enabled_tracks[0] == true) {
+        result.push_back(buffers.front());
+    }
+    else {
+        // search samples mapped to this note for best choice based on velocity
+        auto iter = buffers.begin();
+        for (int i = 0; i < buffers.size(); i++, iter++) {
+            auto pBuf = *iter;
+            // if sample does not have velocity range, accept it trivially
+            if (enabled_tracks[i] && ((pBuf->minimumVelocity < 0 || pBuf->maximumVelocity < 0) ||
+                ((int)velocity >= pBuf->minimumVelocity && (int)velocity <= pBuf->maximumVelocity)))
+                result.push_back(pBuf);
+        }
+    }
+    
+    return result;
 }
 
 void CoreSampler::setNoteFrequency(int noteNumber, float noteFrequency)
@@ -242,11 +252,11 @@ DunneCore::SamplerVoice *CoreSampler::voicePlayingNote(unsigned noteNumber)
     return 0;
 }
 
-void CoreSampler::playNote(unsigned noteNumber, unsigned velocity)
+void CoreSampler::playNote(unsigned noteNumber, unsigned velocity, LoopDescriptor loop, int64_t offset)
 {
     bool anotherKeyWasDown = data->pedalLogic.isAnyKeyDown();
     data->pedalLogic.keyDownAction(noteNumber);
-    play(noteNumber, velocity, anotherKeyWasDown);
+    play(noteNumber, velocity, anotherKeyWasDown, loop, offset);
 }
 
 void CoreSampler::stopNote(unsigned noteNumber, bool immediate)
@@ -268,7 +278,7 @@ void CoreSampler::sustainPedal(bool down)
     }
 }
 
-void CoreSampler::play(unsigned noteNumber, unsigned velocity, bool anotherKeyWasDown)
+void CoreSampler::play(unsigned noteNumber, unsigned velocity, bool anotherKeyWasDown, LoopDescriptor loop, int64_t offset)
 {
     if (stoppingAllVoices) return;
 
@@ -289,9 +299,9 @@ void CoreSampler::play(unsigned noteNumber, unsigned velocity, bool anotherKeyWa
             }
             else
             {
-                DunneCore::KeyMappedSampleBuffer *pBuf = lookupSample(noteNumber, velocity);
-                if (pBuf == 0) return;  // don't crash if someone forgets to build map
-                pVoice->start(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, pBuf);
+                auto pBufs = lookupSamples(noteNumber, velocity, loop);
+                if (pBufs.size() == 0) return;  // don't crash if someone forgets to build map
+                pVoice->start(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, loop, pBufs);
             }
             lastPlayedNoteNumber = noteNumber;
             return;
@@ -300,12 +310,12 @@ void CoreSampler::play(unsigned noteNumber, unsigned velocity, bool anotherKeyWa
         {
             // monophonic but not legato: always start a new note
             DunneCore::SamplerVoice *pVoice = &data->voice[0];
-            DunneCore::KeyMappedSampleBuffer *pBuf = lookupSample(noteNumber, velocity);
-            if (pBuf == 0) return;  // don't crash if someone forgets to build map
+            auto pBufs = lookupSamples(noteNumber, velocity, loop);
+            if (pBufs.size() == 0) return;  // don't crash if someone forgets to build map
             if (pVoice->noteNumber >= 0)
-                pVoice->restartNewNote(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, pBuf);
+                pVoice->restartNewNote(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, loop, pBufs);
             else
-                pVoice->start(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, pBuf);
+                pVoice->start(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, loop, pBufs);
             lastPlayedNoteNumber = noteNumber;
             return;
         }
@@ -317,10 +327,10 @@ void CoreSampler::play(unsigned noteNumber, unsigned velocity, bool anotherKeyWa
         DunneCore::SamplerVoice *pVoice = voicePlayingNote(noteNumber);
         if (pVoice)
         {
-            DunneCore::KeyMappedSampleBuffer *pBuf = lookupSample(noteNumber, velocity);
-            if (pBuf == 0) return; // don't crash if someone forgets to build map
+            auto pBufs = lookupSamples(noteNumber, velocity, loop);
+            if (pBufs.size() == 0) return; // don't crash if someone forgets to build map
             // re-start the note
-            pVoice->restartSameNote(velocity / 127.0f, pBuf);
+            pVoice->restartSameNote(velocity / 127.0f, loop, pBufs);
             return;
         }
         
@@ -332,9 +342,9 @@ void CoreSampler::play(unsigned noteNumber, unsigned velocity, bool anotherKeyWa
             if (pVoice->noteNumber < 0)
             {
                 // found a free voice: assign it to play this note
-                DunneCore::KeyMappedSampleBuffer *pBuf = lookupSample(noteNumber, velocity);
-                if (pBuf == 0) return;  // don't crash if someone forgets to build map
-                pVoice->start(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, pBuf);
+                auto pBufs = lookupSamples(noteNumber, velocity, loop);
+                if (pBufs.size() == 0) return;  // don't crash if someone forgets to build map
+                pVoice->start(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, loop, pBufs);
                 lastPlayedNoteNumber = noteNumber;
                 return;
             }
@@ -359,12 +369,12 @@ void CoreSampler::stop(unsigned noteNumber, bool immediate)
         else
         {
             unsigned velocity = 100;
-            DunneCore::KeyMappedSampleBuffer *pBuf = lookupSample(key, velocity);
-            if (pBuf == 0) return;  // don't crash if someone forgets to build map
+            auto pBufs = lookupSamples(key, velocity, pVoice->currentLoop);
+            if (pBufs.size() == 0) return;  // don't crash if someone forgets to build map
             if (pVoice->noteNumber >= 0)
-                pVoice->restartNewNote(key, currentSampleRate, data->tuningTable[key], velocity / 127.0f, pBuf);
+                pVoice->restartNewNote(key, currentSampleRate, data->tuningTable[key], velocity / 127.0f, pBufs);
             else
-                pVoice->start(key, currentSampleRate, data->tuningTable[key], velocity / 127.0f, pBuf);
+                pVoice->start(key, currentSampleRate, data->tuningTable[key], velocity / 127.0f, pBufs);
         }
     }
     else

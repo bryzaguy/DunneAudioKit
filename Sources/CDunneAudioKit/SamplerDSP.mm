@@ -100,9 +100,9 @@ void akSamplerSetLoopThruRelease(DSPRef pDSP, bool value) {
     ((SamplerDSP*)pDSP)->setLoopThruRelease(value);
 }
 
-void akSamplerPlayNote(DSPRef pDSP, UInt8 noteNumber, UInt8 velocity)
+void akSamplerPlayNote(DSPRef pDSP, UInt8 noteNumber, UInt8 velocity, LoopDescriptor loop, int64_t offset)
 {
-    ((SamplerDSP*)pDSP)->playNote(noteNumber, velocity);
+    ((SamplerDSP*)pDSP)->playNote(noteNumber, velocity, loop, offset);
 }
 
 void akSamplerStopNote(DSPRef pDSP, UInt8 noteNumber, bool immediate)
@@ -369,7 +369,11 @@ void SamplerDSP::handleMIDIEvent(const AUMIDIEvent &midiEvent)
             uint8_t note = midiEvent.data[1];
             uint8_t veloc = midiEvent.data[2];
             if (note > 127 || veloc > 127) break;
-            playNote(note, veloc);
+            playNote(note, veloc, {
+                .isLooping = true,
+                .loopStartPoint = 0,
+                .loopEndPoint = 0
+            }, 0);
             break;
         }
         case MIDI_CONTINUOUS_CONTROLLER : {
@@ -392,7 +396,6 @@ void SamplerDSP::handleMIDIEvent(const AUMIDIEvent &midiEvent)
 
 void SamplerDSP::process(FrameRange range)
 {
-
     float *pLeft = (float *)outputBufferList->mBuffers[0].mData + range.start;
     float *pRight = (float *)outputBufferList->mBuffers[1].mData + range.start;
 
