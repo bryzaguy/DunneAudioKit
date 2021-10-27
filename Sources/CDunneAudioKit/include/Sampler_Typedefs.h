@@ -6,7 +6,7 @@
 
 typedef struct
 {
-    bool isLooping;
+    bool isLooping, reversed;
     unsigned int loopStartPoint, loopEndPoint, *enabledTracks;
     int enabledTracksCount;
 

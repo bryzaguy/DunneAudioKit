@@ -45,7 +45,7 @@ namespace DunneCore
             *rightOutput = 0;
             for (const auto buffer : sampleBuffers) {
                 float left = 0, right = 0;
-                buffer->interp(indexPoint, &left, &right, gain);
+                buffer->interp(loop.reversed ? buffer->endPoint - indexPoint : indexPoint, &left, &right, gain);
                 *leftOutput += left;
                 *rightOutput += right;
             }
