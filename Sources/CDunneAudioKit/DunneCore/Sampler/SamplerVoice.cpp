@@ -34,6 +34,7 @@ namespace DunneCore
 
         auto buffer = buffers.front();
         oscillator.indexPoint = loop.loopStartPoint;
+        oscillator.muteIndex = 0;
         oscillator.increment = (buffer->sampleRate / sampleRate) * (frequency / buffer->noteFrequency);
         oscillator.multiplier = 1.0;
         oscillator.isLooping = loop.isLooping;
@@ -174,6 +175,7 @@ namespace DunneCore
                 auto sampleBuffer = sampleBuffers.front();
                 oscillator.increment = (sampleBuffer->sampleRate / samplingRate) * (noteFrequency / sampleBuffer->noteFrequency);
                 oscillator.indexPoint = nextLoop.loopStartPoint;
+                oscillator.muteIndex = 0;
                 oscillator.isLooping = nextLoop.isLooping;
             }
         }

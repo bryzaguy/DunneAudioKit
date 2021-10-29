@@ -7,8 +7,9 @@
 typedef struct
 {
     bool isLooping, reversed;
-    unsigned int loopStartPoint, loopEndPoint, *enabledTracks;
-    int enabledTracksCount;
+    unsigned int loopStartPoint, loopEndPoint,
+        enabledTracksCount, *enabledTracks,
+        mutedCount, *mutedStartPoints, *mutedEndPoints;
 
 } LoopDescriptor;
 
