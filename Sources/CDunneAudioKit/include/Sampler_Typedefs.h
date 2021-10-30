@@ -21,8 +21,8 @@ typedef struct
     int minimumNoteNumber, maximumNoteNumber;
     int minimumVelocity, maximumVelocity;
     
-    bool isLooping;
-    float loopStartPoint, loopEndPoint;
+//    bool isLooping;
+//    float loopStartPoint, loopEndPoint;
     float startPoint, endPoint;
 
 } SampleDescriptor;

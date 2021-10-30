@@ -11,10 +11,10 @@ namespace DunneCore
     , sampleCount(0)
     , startPoint(0.0f)
     , endPoint(0.0f)
-    , isLooping(false)
+//    , isLooping(false)
     , isInterleaved(false)
-    , loopStartPoint(0.0f)
-    , loopEndPoint(0.0f)
+//    , loopStartPoint(0.0f)
+//    , loopEndPoint(0.0f)
     {
     }
     
@@ -29,8 +29,7 @@ namespace DunneCore
         this->sampleCount = sampleCount;
         this->channelCount = channelCount;
         this->isInterleaved = isInterleaved;
-        loopStartPoint = startPoint = 0.0f;
-        loopEndPoint = endPoint = (float)(sampleCount - 1);
+        startPoint = 0.0f;
     }
     
     void SampleBuffer::deinit()

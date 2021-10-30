@@ -23,26 +23,14 @@ namespace DunneCore
         void setPitchOffsetSemitones(double semitones) { multiplier = pow(2.0, semitones/12.0); }
         
         // return true if we run out of samples
-        inline bool getSample(SampleBuffer *sampleBuffer, int sampleCount, float *output, float gain)
-        {
-            if (sampleBuffer == NULL || indexPoint > sampleBuffer->endPoint) return true;
-            *output = sampleBuffer->interp(indexPoint, gain);
-            
-            indexPoint += multiplier * increment;
-            if (sampleBuffer->isLooping && isLooping)
-            {
-                if (indexPoint > sampleBuffer->loopEndPoint)
-                    indexPoint = indexPoint - sampleBuffer->loopEndPoint + sampleBuffer->loopStartPoint;
-            }
-            return false;
-        }
-        
-        // return true if we run out of samples
         inline bool getSamplePair(std::list<SampleBuffer*> sampleBuffers, LoopDescriptor loop, int sampleCount, float *leftOutput, float *rightOutput, float gain)
         {
             auto sampleBuffer = sampleBuffers.front();
-            auto loopEndPoint = loop.loopEndPoint == 0 ? sampleBuffer->loopEndPoint : loop.loopEndPoint;
-            if (sampleBuffer == NULL || indexPoint > sampleBuffer->endPoint) return true;
+            auto loopEndPoint = loop.loopEndPoint == 0 ? sampleBuffer->endPoint : loop.loopEndPoint;
+            if (sampleBuffer == NULL || indexPoint > sampleBuffer->endPoint) {
+                muteIndex = 0;
+                return true;
+            }
             
             if (muteIndex < loop.mutedCount) {
                 auto start = loop.mutedStartPoints[muteIndex] + loop.loopStartPoint;
@@ -64,7 +52,8 @@ namespace DunneCore
             *rightOutput = 0;
             for (const auto buffer : sampleBuffers) {
                 float left = 0, right = 0;
-                buffer->interp(loop.reversed ? buffer->endPoint - indexPoint : indexPoint, &left, &right, gain * muteVolume);
+                auto reversedIndex = loop.loopEndPoint - (indexPoint - loop.loopStartPoint);
+                buffer->interp(loop.reversed ? reversedIndex : indexPoint, &left, &right, gain * muteVolume);
                 *leftOutput += left;
                 *rightOutput += right;
             }
@@ -72,7 +61,7 @@ namespace DunneCore
             indexPoint += multiplier * increment;
             if (loop.isLooping && isLooping)
             {
-                if (indexPoint > loopEndPoint) {
+                if (indexPoint >= loopEndPoint) {
                     indexPoint = indexPoint - loopEndPoint + loop.loopStartPoint;
                     muteIndex = 0;
                 }

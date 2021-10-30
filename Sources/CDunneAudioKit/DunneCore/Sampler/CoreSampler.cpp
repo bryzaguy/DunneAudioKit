@@ -126,27 +126,27 @@ void CoreSampler::loadSampleData(SampleDataDescriptor& sdd)
     pBuf->noteNumber = sdd.sampleDescriptor.noteNumber;
     pBuf->noteFrequency = sdd.sampleDescriptor.noteFrequency;
     
-    // Handle rare case where loopEndPoint is 0 (due to being uninitialized)
-    if (sdd.sampleDescriptor.loopEndPoint == 0.0f)
-        sdd.sampleDescriptor.loopEndPoint = float(sdd.sampleCount - 1);
+//    // Handle rare case where loopEndPoint is 0 (due to being uninitialized)
+//    if (sdd.sampleDescriptor.loopEndPoint == 0.0f)
+//        sdd.sampleDescriptor.loopEndPoint = float(sdd.sampleCount - 1);
 
     if (sdd.sampleDescriptor.startPoint > 0.0f) pBuf->startPoint = sdd.sampleDescriptor.startPoint;
     if (sdd.sampleDescriptor.endPoint > 0.0f)   pBuf->endPoint = sdd.sampleDescriptor.endPoint;
     
-    pBuf->isLooping = sdd.sampleDescriptor.isLooping;
-    if (pBuf->isLooping)
-    {
-        // loopStartPoint, loopEndPoint are usually sample indices, but values 0.0-1.0
-        // are interpreted as fractions of the total sample length.
-        if (sdd.sampleDescriptor.loopStartPoint > 1.0f) pBuf->loopStartPoint = sdd.sampleDescriptor.loopStartPoint;
-        else pBuf->loopStartPoint = pBuf->endPoint * sdd.sampleDescriptor.loopStartPoint;
-        if (sdd.sampleDescriptor.loopEndPoint > 1.0f) pBuf->loopEndPoint = sdd.sampleDescriptor.loopEndPoint;
-        else pBuf->loopEndPoint = pBuf->endPoint * sdd.sampleDescriptor.loopEndPoint;
-
-        // Clamp loop endpoints to valid range
-        if (pBuf->loopStartPoint < pBuf->startPoint) pBuf->loopStartPoint = pBuf->startPoint;
-        if (pBuf->loopEndPoint > pBuf->endPoint) pBuf->loopEndPoint = pBuf->endPoint;
-    }
+//    pBuf->isLooping = sdd.sampleDescriptor.isLooping;
+//    if (pBuf->isLooping)
+//    {
+//        // loopStartPoint, loopEndPoint are usually sample indices, but values 0.0-1.0
+//        // are interpreted as fractions of the total sample length.
+//        if (sdd.sampleDescriptor.loopStartPoint > 1.0f) pBuf->loopStartPoint = sdd.sampleDescriptor.loopStartPoint;
+//        else pBuf->loopStartPoint = pBuf->endPoint * sdd.sampleDescriptor.loopStartPoint;
+//        if (sdd.sampleDescriptor.loopEndPoint > 1.0f) pBuf->loopEndPoint = sdd.sampleDescriptor.loopEndPoint;
+//        else pBuf->loopEndPoint = pBuf->endPoint * sdd.sampleDescriptor.loopEndPoint;
+//
+//        // Clamp loop endpoints to valid range
+//        if (pBuf->loopStartPoint < pBuf->startPoint) pBuf->loopStartPoint = pBuf->startPoint;
+//        if (pBuf->loopEndPoint > pBuf->endPoint) pBuf->loopEndPoint = pBuf->endPoint;
+//    }
 }
 
 std::list<DunneCore::SampleBuffer*> CoreSampler::lookupSamples(unsigned noteNumber, unsigned velocity, LoopDescriptor loop)

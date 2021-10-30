@@ -35,9 +35,9 @@ extension Sampler {
         var lowVelocity: MIDIVelocity = 0
         var highVelocity: MIDIVelocity = 127
         var sample: String = ""
-        var loopMode: String = ""
-        var loopStartPoint: Float32 = 0
-        var loopEndPoint: Float32 = 0
+//        var loopMode: String = ""
+//        var loopStartPoint: Float32 = 0
+//        var loopEndPoint: Float32 = 0
 
         let samplesBaseURL = url.deletingLastPathComponent()
 
@@ -73,12 +73,12 @@ extension Sampler {
                             lowVelocity = MIDIVelocity(part.components(separatedBy: "=")[1]) ?? 0
                         } else if part.hasPrefix("hivel") {
                             highVelocity = MIDIVelocity(part.components(separatedBy: "=")[1]) ?? 0
-                        } else if part.hasPrefix("loop_mode") {
-                            loopMode = part.components(separatedBy: "=")[1]
-                        } else if part.hasPrefix("loop_start") {
-                            loopStartPoint = Float32(part.components(separatedBy: "=")[1]) ?? 0
-                        } else if part.hasPrefix("loop_end") {
-                            loopEndPoint = Float32(part.components(separatedBy: "=")[1]) ?? 0
+//                        } else if part.hasPrefix("loop_mode") {
+//                            loopMode = part.components(separatedBy: "=")[1]
+//                        } else if part.hasPrefix("loop_start") {
+//                            loopStartPoint = Float32(part.components(separatedBy: "=")[1]) ?? 0
+//                        } else if part.hasPrefix("loop_end") {
+//                            loopEndPoint = Float32(part.components(separatedBy: "=")[1]) ?? 0
                         } else if part.hasPrefix("sample") {
                             sample = trimmed.components(separatedBy: "sample=")[1]
                         }
@@ -95,9 +95,9 @@ extension Sampler {
                                                               maximumNoteNumber: Int32(highNoteNumber),
                                                               minimumVelocity: Int32(lowVelocity),
                                                               maximumVelocity: Int32(highVelocity),
-                                                              isLooping: loopMode != "",
-                                                              loopStartPoint: loopStartPoint,
-                                                              loopEndPoint: loopEndPoint,
+//                                                              isLooping: loopMode != "",
+//                                                              loopStartPoint: loopStartPoint,
+//                                                              loopEndPoint: loopEndPoint,
                                                               startPoint: 0.0,
                                                               endPoint: 0.0)
                     sample = sample.replacingOccurrences(of: "\\", with: "/")

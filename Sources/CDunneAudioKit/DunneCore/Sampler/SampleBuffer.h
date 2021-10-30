@@ -14,8 +14,8 @@ namespace DunneCore
         int channelCount;
         int sampleCount;
         float startPoint, endPoint;
-        bool isLooping, isInterleaved;
-        float loopStartPoint, loopEndPoint;
+        bool isInterleaved;
+//        float loopStartPoint, loopEndPoint;
         float noteFrequency;
         
         SampleBuffer();
