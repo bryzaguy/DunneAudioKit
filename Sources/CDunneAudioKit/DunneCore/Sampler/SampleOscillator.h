@@ -18,6 +18,7 @@ namespace DunneCore
         double multiplier;  // multiplier applied to increment for pitch bend, vibrato
         double muteVolume = 1;
         unsigned int muteIndex = 0;
+        double fadeGain = 0;
         
         
         void setPitchOffsetSemitones(double semitones) { multiplier = pow(2.0, semitones/12.0); }
@@ -32,20 +33,26 @@ namespace DunneCore
                 return true;
             }
             
+            auto fadeSize = (int)sampleBuffer->sampleRate / 100;
             if (muteIndex < loop.mutedCount) {
                 auto start = loop.mutedStartPoints[muteIndex] + loop.loopStartPoint;
                 auto end = loop.mutedEndPoints[muteIndex] + loop.loopStartPoint;
-                auto fadeSize = (int)sampleBuffer->sampleRate / 100;
-                if (indexPoint > start && indexPoint < start + fadeSize) {
-                    muteVolume = 1.0 - ((indexPoint - start) / fadeSize);
-                } else if (indexPoint > start + fadeSize && indexPoint > end && indexPoint < end + fadeSize) {
-                    muteVolume = ((indexPoint - end) / fadeSize);
-                } else if (indexPoint == start + fadeSize) {
+                if (indexPoint == start + fadeSize) {
                     muteVolume = 0;
                 } else if (indexPoint == end + fadeSize) {
                     muteVolume = 1;
                     muteIndex++;
+                } else if (indexPoint > start && indexPoint < start + fadeSize) {
+                    muteVolume = 1.0 - ((indexPoint - start) / fadeSize);
+                } else if (indexPoint > start + fadeSize && indexPoint > end && indexPoint < end + fadeSize) {
+                    muteVolume = ((indexPoint - end) / fadeSize);
                 }
+            }
+            
+            if (indexPoint <= loop.loopStartPoint + fadeSize) {
+                fadeGain = (indexPoint - loop.loopStartPoint) / fadeSize;
+            } else if (indexPoint >= loop.loopEndPoint - fadeSize) {
+                fadeGain = 1.0 - ((indexPoint - (loop.loopEndPoint - fadeSize)) / fadeSize);
             }
             
             *leftOutput = 0;
@@ -53,7 +60,7 @@ namespace DunneCore
             for (const auto buffer : sampleBuffers) {
                 float left = 0, right = 0;
                 auto reversedIndex = loop.loopEndPoint - (indexPoint - loop.loopStartPoint);
-                buffer->interp(loop.reversed ? reversedIndex : indexPoint, &left, &right, gain * muteVolume);
+                buffer->interp(loop.reversed ? reversedIndex : indexPoint, &left, &right, gain * muteVolume * fadeGain);
                 *leftOutput += left;
                 *rightOutput += right;
             }
