@@ -36,6 +36,8 @@ struct CoreSampler::InternalData {
     
     DunneCore::SustainPedalLogic pedalLogic;
     
+    std::list<DunneCore::SamplerVoice*> preparedVoices;
+    
     // tuning table
     float tuningTable[128];
 };
@@ -125,28 +127,9 @@ void CoreSampler::loadSampleData(SampleDataDescriptor& sdd)
     pBuf->samples = sdd.data;
     pBuf->noteNumber = sdd.sampleDescriptor.noteNumber;
     pBuf->noteFrequency = sdd.sampleDescriptor.noteFrequency;
-    
-//    // Handle rare case where loopEndPoint is 0 (due to being uninitialized)
-//    if (sdd.sampleDescriptor.loopEndPoint == 0.0f)
-//        sdd.sampleDescriptor.loopEndPoint = float(sdd.sampleCount - 1);
 
     if (sdd.sampleDescriptor.startPoint > 0.0f) pBuf->startPoint = sdd.sampleDescriptor.startPoint;
     if (sdd.sampleDescriptor.endPoint > 0.0f)   pBuf->endPoint = sdd.sampleDescriptor.endPoint;
-    
-//    pBuf->isLooping = sdd.sampleDescriptor.isLooping;
-//    if (pBuf->isLooping)
-//    {
-//        // loopStartPoint, loopEndPoint are usually sample indices, but values 0.0-1.0
-//        // are interpreted as fractions of the total sample length.
-//        if (sdd.sampleDescriptor.loopStartPoint > 1.0f) pBuf->loopStartPoint = sdd.sampleDescriptor.loopStartPoint;
-//        else pBuf->loopStartPoint = pBuf->endPoint * sdd.sampleDescriptor.loopStartPoint;
-//        if (sdd.sampleDescriptor.loopEndPoint > 1.0f) pBuf->loopEndPoint = sdd.sampleDescriptor.loopEndPoint;
-//        else pBuf->loopEndPoint = pBuf->endPoint * sdd.sampleDescriptor.loopEndPoint;
-//
-//        // Clamp loop endpoints to valid range
-//        if (pBuf->loopStartPoint < pBuf->startPoint) pBuf->loopStartPoint = pBuf->startPoint;
-//        if (pBuf->loopEndPoint > pBuf->endPoint) pBuf->loopEndPoint = pBuf->endPoint;
-//    }
 }
 
 std::list<DunneCore::SampleBuffer*> CoreSampler::lookupSamples(unsigned noteNumber, unsigned velocity, LoopDescriptor loop)
@@ -252,11 +235,30 @@ DunneCore::SamplerVoice *CoreSampler::voicePlayingNote(unsigned noteNumber)
     return 0;
 }
 
-void CoreSampler::playNote(unsigned noteNumber, unsigned velocity, LoopDescriptor loop, int64_t offset)
+void CoreSampler::enableNext()
+{
+    for (int i=0; i < MAX_POLYPHONY; i++)
+    {
+        if (data->voice[i].next.state == DunneCore::PlayEvent::SCHEDULED) {
+            data->voice[i].next.state = DunneCore::PlayEvent::QUEUED;
+        }
+    }
+}
+
+void CoreSampler::play(int64_t futureTime)
+{
+    for (auto &voice : data->preparedVoices)
+    {
+        voice->play(futureTime);
+    }
+    data->preparedVoices.clear();
+}
+
+void CoreSampler::prepareNote(unsigned noteNumber, unsigned velocity, LoopDescriptor loop)
 {
     bool anotherKeyWasDown = data->pedalLogic.isAnyKeyDown();
     data->pedalLogic.keyDownAction(noteNumber);
-    play(noteNumber, velocity, anotherKeyWasDown, loop, offset);
+    prepare(noteNumber, velocity, anotherKeyWasDown, loop);
 }
 
 void CoreSampler::stopNote(unsigned noteNumber, bool immediate)
@@ -278,9 +280,12 @@ void CoreSampler::sustainPedal(bool down)
     }
 }
 
-void CoreSampler::play(unsigned noteNumber, unsigned velocity, bool anotherKeyWasDown, LoopDescriptor loop, int64_t offset)
+void CoreSampler::prepare(unsigned noteNumber, unsigned velocity, bool anotherKeyWasDown, LoopDescriptor loop)
 {
     if (stoppingAllVoices) return;
+ 
+    auto pBufs = lookupSamples(noteNumber, velocity, loop);
+    if (pBufs.size() == 0) return;  // don't crash if someone forgets to build map
 
     float noteFrequency = data->tuningTable[noteNumber];
     
@@ -299,10 +304,9 @@ void CoreSampler::play(unsigned noteNumber, unsigned velocity, bool anotherKeyWa
             }
             else
             {
-                auto pBufs = lookupSamples(noteNumber, velocity, loop);
-                if (pBufs.size() == 0) return;  // don't crash if someone forgets to build map
-                pVoice->start(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, loop, pBufs);
+                pVoice->prepare(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, loop, pBufs);
             }
+            data->preparedVoices.push_back(pVoice);
             lastPlayedNoteNumber = noteNumber;
             return;
         }
@@ -310,12 +314,12 @@ void CoreSampler::play(unsigned noteNumber, unsigned velocity, bool anotherKeyWa
         {
             // monophonic but not legato: always start a new note
             DunneCore::SamplerVoice *pVoice = &data->voice[0];
-            auto pBufs = lookupSamples(noteNumber, velocity, loop);
-            if (pBufs.size() == 0) return;  // don't crash if someone forgets to build map
             if (pVoice->noteNumber >= 0)
                 pVoice->restartNewNote(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, loop, pBufs);
             else
-                pVoice->start(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, loop, pBufs);
+                pVoice->prepare(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, loop, pBufs);
+            
+            data->preparedVoices.push_back(pVoice);
             lastPlayedNoteNumber = noteNumber;
             return;
         }
@@ -327,10 +331,9 @@ void CoreSampler::play(unsigned noteNumber, unsigned velocity, bool anotherKeyWa
         DunneCore::SamplerVoice *pVoice = voicePlayingNote(noteNumber);
         if (pVoice)
         {
-            auto pBufs = lookupSamples(noteNumber, velocity, loop);
-            if (pBufs.size() == 0) return; // don't crash if someone forgets to build map
             // re-start the note
             pVoice->restartSameNote(velocity / 127.0f, loop, pBufs);
+            data->preparedVoices.push_back(pVoice);
             return;
         }
         
@@ -341,10 +344,8 @@ void CoreSampler::play(unsigned noteNumber, unsigned velocity, bool anotherKeyWa
             DunneCore::SamplerVoice *pVoice = &data->voice[i];
             if (pVoice->noteNumber < 0)
             {
-                // found a free voice: assign it to play this note
-                auto pBufs = lookupSamples(noteNumber, velocity, loop);
-                if (pBufs.size() == 0) return;  // don't crash if someone forgets to build map
-                pVoice->start(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, loop, pBufs);
+                pVoice->prepare(noteNumber, currentSampleRate, noteFrequency, velocity / 127.0f, loop, pBufs);
+                data->preparedVoices.push_back(pVoice);
                 lastPlayedNoteNumber = noteNumber;
                 return;
             }
@@ -374,7 +375,7 @@ void CoreSampler::stop(unsigned noteNumber, bool immediate)
             if (pVoice->noteNumber >= 0)
                 pVoice->restartNewNote(key, currentSampleRate, data->tuningTable[key], velocity / 127.0f, pBufs);
             else
-                pVoice->start(key, currentSampleRate, data->tuningTable[key], velocity / 127.0f, pBufs);
+                pVoice->prepare(key, currentSampleRate, data->tuningTable[key], velocity / 127.0f, pBufs);
         }
     }
     else
@@ -404,7 +405,22 @@ void CoreSampler::restartVoices()
     stoppingAllVoices = false;
 }
 
-void CoreSampler::render(unsigned channelCount, unsigned sampleCount, float *outBuffers[])
+void CoreSampler::renderVoice(bool allowSampleRunout, float cutoffMul, float *pOutLeft, float *pOutRight, DunneCore::SamplerVoice *pVoice, float pitchDev, unsigned int sampleCount) {
+    int nn = pVoice->noteNumber;
+    if (nn >= 0)
+    {
+        if (stoppingAllVoices ||
+            pVoice->prepToGetSamples(sampleCount, masterVolume, pitchDev, cutoffMul, keyTracking,
+                                     cutoffEnvelopeStrength, filterEnvelopeVelocityScaling, linearResonance,
+                                     pitchADSRSemitones, voiceVibratoDepth, voiceVibratoFrequency) ||
+            (pVoice->getSamples(sampleCount, pOutLeft, pOutRight) && allowSampleRunout))
+        {
+            stopNote(nn, true);
+        }
+    }
+}
+
+void CoreSampler::render(unsigned channelCount, unsigned sampleCount, float *outBuffers[], int64_t now)
 {
     float *pOutLeft = outBuffers[0];
     float *pOutRight = outBuffers[1];
@@ -418,17 +434,31 @@ void CoreSampler::render(unsigned channelCount, unsigned sampleCount, float *out
     for (int i=0; i < MAX_POLYPHONY; i++, pVoice++)
     {
         pVoice->restartVoiceLFO = restartVoiceLFO;
-        int nn = pVoice->noteNumber;
-        if (nn >= 0)
-        {
-            if (stoppingAllVoices ||
-                pVoice->prepToGetSamples(sampleCount, masterVolume, pitchDev, cutoffMul, keyTracking,
-                                         cutoffEnvelopeStrength, filterEnvelopeVelocityScaling, linearResonance,
-                                         pitchADSRSemitones, voiceVibratoDepth, voiceVibratoFrequency) ||
-                (pVoice->getSamples(sampleCount, pOutLeft, pOutRight) && allowSampleRunout))
+        
+        if (pVoice->next.state == DunneCore::PlayEvent::QUEUED && pVoice->next.futureTime >= now && pVoice->next.futureTime < (now + sampleCount)) {
+            if (!pVoice->next.seen)
             {
-                stopNote(nn, true);
+                pVoice->next.seen = true;
             }
+            pVoice->next.state = DunneCore::PlayEvent::READY;
+        }
+        
+        if (pVoice->next.state == DunneCore::PlayEvent::READY) {
+            auto offset = (unsigned int)(pVoice->next.futureTime - now);
+            if (offset > 0) {
+                renderVoice(allowSampleRunout, cutoffMul, pOutLeft, pOutRight, pVoice, pitchDev, offset);
+
+                pOutLeft += offset;
+                pOutRight += offset;
+            }
+
+            pVoice->next.start();
+            pVoice->next.state = DunneCore::PlayEvent::PLAYING;
+            pVoice->current = pVoice->next;
+            
+            renderVoice(allowSampleRunout, cutoffMul, pOutLeft, pOutRight, pVoice, pitchDev, sampleCount - offset);
+        } else {
+            renderVoice(allowSampleRunout, cutoffMul, pOutLeft, pOutRight, pVoice, pitchDev, sampleCount);
         }
     }
 }

@@ -32,6 +32,9 @@ struct SamplerDSP : DSPBase, CoreSampler
 
     void handleMIDIEvent(AUMIDIEvent const& midiEvent) override;
     void process(FrameRange range) override;
+    AUEventSampleTime currentTime() {
+        return now;
+    };
 };
 
 DSPRef akSamplerCreateDSP() {
@@ -100,9 +103,15 @@ void akSamplerSetLoopThruRelease(DSPRef pDSP, bool value) {
     ((SamplerDSP*)pDSP)->setLoopThruRelease(value);
 }
 
-void akSamplerPlayNote(DSPRef pDSP, UInt8 noteNumber, UInt8 velocity, LoopDescriptor loop, int64_t offset)
+void akSamplerPlayNote(DSPRef pDSP, int64_t offset)
 {
-    ((SamplerDSP*)pDSP)->playNote(noteNumber, velocity, loop, offset);
+    auto now = ((SamplerDSP*)pDSP)->currentTime();
+    ((SamplerDSP*)pDSP)->play(offset + now);
+}
+
+void akSamplerPrepareNote(DSPRef pDSP, UInt8 noteNumber, UInt8 velocity, LoopDescriptor loop)
+{
+    ((SamplerDSP*)pDSP)->prepareNote(noteNumber, velocity, loop);
 }
 
 void akSamplerStopNote(DSPRef pDSP, UInt8 noteNumber, bool immediate)
@@ -369,11 +378,11 @@ void SamplerDSP::handleMIDIEvent(const AUMIDIEvent &midiEvent)
             uint8_t note = midiEvent.data[1];
             uint8_t veloc = midiEvent.data[2];
             if (note > 127 || veloc > 127) break;
-            playNote(note, veloc, {
+            prepareNote(note, veloc, {
                 .isLooping = true,
                 .loopStartPoint = 0,
                 .loopEndPoint = 0
-            }, 0);
+            });
             break;
         }
         case MIDI_CONTINUOUS_CONTROLLER : {
@@ -401,6 +410,8 @@ void SamplerDSP::process(FrameRange range)
 
     memset(pLeft, 0, range.count * sizeof(float));
     memset(pRight, 0, range.count * sizeof(float));
+    
+    CoreSampler::enableNext();
 
     // process in chunks of maximum length CORESAMPLER_CHUNKSIZE
     for (int frameIndex = 0; frameIndex < range.count; frameIndex += CORESAMPLER_CHUNKSIZE) {
@@ -439,7 +450,7 @@ void SamplerDSP::process(FrameRange range)
         outBuffers[0] = (float *)outputBufferList->mBuffers[0].mData + frameOffset;
         outBuffers[1] = (float *)outputBufferList->mBuffers[1].mData + frameOffset;
         unsigned channelCount = outputBufferList->mNumberBuffers;
-        CoreSampler::render(channelCount, chunkSize, outBuffers);
+        CoreSampler::render(channelCount, chunkSize, outBuffers, now + frameOffset);
     }
 }
 

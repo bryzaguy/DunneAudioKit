@@ -15,7 +15,6 @@ namespace DunneCore
         int sampleCount;
         float startPoint, endPoint;
         bool isInterleaved;
-//        float loopStartPoint, loopEndPoint;
         float noteFrequency;
         
         SampleBuffer();

@@ -20,30 +20,84 @@ namespace DunneCore
         restartVoiceLFO = false;
         volumeRamper.init(0.0f);
         tempGain = 0.0f;
+        next = {};
+        scheduled = {};
     }
 
-    void SamplerVoice::start(unsigned note, float sampleRate, float frequency, float volume, std::list<SampleBuffer*> buffers)
+    void SamplerVoice::prepare(unsigned note, float sampleRate, float frequency, float volume, std::list<SampleBuffer*> buffers)
     {
-        start(note, sampleRate, frequency, volume, this->currentLoop, buffers);
+        prepare(note, sampleRate, frequency, volume, this->currentLoop, buffers);
     }
 
-    void SamplerVoice::start(unsigned note, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers)
+    void SamplerVoice::prepare(unsigned note, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers)
     {
-        sampleBuffers = buffers;
-        currentLoop = loop;
+        prepare(note, sampleRate, frequency, volume, loop, buffers, [this]() { this->start(); });
+    }
 
-        auto buffer = buffers.front();
-        oscillator.indexPoint = loop.loopStartPoint;
-        oscillator.muteIndex = 0;
-        oscillator.increment = (buffer->sampleRate / sampleRate) * (frequency / buffer->noteFrequency);
-        oscillator.multiplier = 1.0;
-        oscillator.isLooping = loop.isLooping;
+    void SamplerVoice::prepare(unsigned note, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers,
+        std::function<void()> start)
+    {
+        PlayEvent event;
+        event.note = note;
+        event.sampleRate = sampleRate;
+        event.frequency = frequency;
+        event.volume = volume;
+        event.buffers = buffers;
+        event.loop = loop;
+        unsigned int *mutedEnds = new unsigned int[loop.mutedCount];
+        unsigned int *mutedStarts = new unsigned int[loop.mutedCount];
+        unsigned int *enabledTracks = new unsigned int[loop.enabledTracksCount];
+        memcpy(mutedStarts, loop.mutedStartPoints, sizeof(unsigned int) * loop.mutedCount);
+        memcpy(mutedEnds, loop.mutedEndPoints, sizeof(unsigned int) * loop.mutedCount);
+        memcpy(enabledTracks, loop.enabledTracks, sizeof(unsigned int) * loop.enabledTracksCount);
+        event.loop.mutedStartPoints = mutedStarts;
+        event.loop.mutedEndPoints = mutedEnds;
+        event.loop.enabledTracks = enabledTracks;
+        event.start = start;
         
-        noteVolume = volume;
+        auto buffer = buffers.front();
+        event.increment = (buffer->sampleRate / sampleRate) * (frequency / buffer->noteFrequency);
+        
+        event.glideSemitones = 0.0f;
+        if (*glideSecPerOctave != 0.0f && noteFrequency != 0.0 && noteFrequency != frequency)
+        {
+            // prepare to glide
+            event.glideSemitones = -12.0f * log2f(frequency / noteFrequency);
+            if (fabsf(event.glideSemitones) < 0.01f) event.glideSemitones = 0.0f;
+        }
+        
+        if (!current.equals(event) || current.state != PlayEvent::PLAYING) {
+            event.state = PlayEvent::CREATED;
+        }
+        scheduled = event;
+    }
+
+    void SamplerVoice::play(int64_t futureTime)
+    {
+        if (scheduled.state == PlayEvent::CREATED) {
+            auto event = scheduled;
+            event.state = PlayEvent::SCHEDULED;
+            event.futureTime = futureTime;
+            next = event;
+        }
+    }
+
+    void SamplerVoice::start()
+    {
+        sampleBuffers = next.buffers;
+        currentLoop = next.loop;
+
+        oscillator.indexPoint = next.loop.loopStartPoint;
+        oscillator.muteIndex = 0;
+        oscillator.increment = next.increment;
+        oscillator.multiplier = 1.0;
+        oscillator.isLooping = next.loop.isLooping;
+        
+        noteVolume = next.volume;
         ampEnvelope.start();
         volumeRamper.init(0.0f);
         
-        samplingRate = sampleRate;
+        samplingRate = next.sampleRate;
         leftFilter.updateSampleRate(double(samplingRate));
         rightFilter.updateSampleRate(double(samplingRate));
         filterEnvelope.start();
@@ -54,15 +108,9 @@ namespace DunneCore
 
         voiceLFOSemitones = 0.0f;
 
-        glideSemitones = 0.0f;
-        if (*glideSecPerOctave != 0.0f && noteFrequency != 0.0 && noteFrequency != frequency)
-        {
-            // prepare to glide
-            glideSemitones = -12.0f * log2f(frequency / noteFrequency);
-            if (fabsf(glideSemitones) < 0.01f) glideSemitones = 0.0f;
-        }
-        noteFrequency = frequency;
-        noteNumber = note;
+        glideSemitones = next.glideSemitones;
+        noteFrequency = next.frequency;
+        noteNumber = next.note;
 
         restartVoiceLFOIfNeeded();
     }
@@ -74,31 +122,28 @@ namespace DunneCore
 
     void SamplerVoice::restartNewNote(unsigned note, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers)
     {
-        samplingRate = sampleRate;
+        prepare(note, sampleRate, frequency, volume, loop, buffers, [this]() { this->restartNewNote(); });
+    }
+
+    void SamplerVoice::restartNewNote()
+    {
+        samplingRate = next.sampleRate;
         leftFilter.updateSampleRate(double(samplingRate));
         rightFilter.updateSampleRate(double(samplingRate));
-        auto sampleBuffer = sampleBuffers.front();
 
-        oscillator.increment = (sampleBuffer->sampleRate / sampleRate) * (frequency / sampleBuffer->noteFrequency);
-        glideSemitones = 0.0f;
-        if (*glideSecPerOctave != 0.0f && noteFrequency != 0.0 && noteFrequency != frequency)
-        {
-            // prepare to glide
-            glideSemitones = -12.0f * log2f(frequency / noteFrequency);
-            if (fabsf(glideSemitones) < 0.01f) glideSemitones = 0.0f;
-        }
+        oscillator.increment = next.increment;
 
         pitchEnvelopeSemitones = 0.0f;
 
         voiceLFOSemitones = 0.0f;
 
-        noteFrequency = frequency;
-        noteNumber = note;
+        noteFrequency = next.frequency;
+        noteNumber = next.note;
         tempNoteVolume = noteVolume;
-        newSampleBuffers = buffers;
-        nextLoop = loop;
+        newSampleBuffers = next.buffers;
+        nextLoop = next.loop;
         ampEnvelope.restart();
-        noteVolume = volume;
+        noteVolume = next.volume;
         filterEnvelope.restart();
         pitchEnvelope.restart();
         restartVoiceLFOIfNeeded();
@@ -106,30 +151,32 @@ namespace DunneCore
 
     void SamplerVoice::restartNewNoteLegato(unsigned note, float sampleRate, float frequency)
     {
-        samplingRate = sampleRate;
+        prepare(note, sampleRate, frequency, noteVolume, currentLoop, sampleBuffers, [this]() { this->restartNewNoteLegato(); });
+    }
+
+    void SamplerVoice::restartNewNoteLegato()
+    {
+        samplingRate = next.sampleRate;
         leftFilter.updateSampleRate(double(samplingRate));
         rightFilter.updateSampleRate(double(samplingRate));
-        auto sampleBuffer = sampleBuffers.front();
 
-        oscillator.increment = (sampleBuffer->sampleRate / sampleRate) * (frequency / sampleBuffer->noteFrequency);
-        glideSemitones = 0.0f;
-        if (*glideSecPerOctave != 0.0f && noteFrequency != 0.0 && noteFrequency != frequency)
-        {
-            // prepare to glide
-            glideSemitones = -12.0f * log2f(frequency / noteFrequency);
-            if (fabsf(glideSemitones) < 0.01f) glideSemitones = 0.0f;
-        }
-        noteFrequency = frequency;
-        noteNumber = note;
+        oscillator.increment = next.increment;
+        noteFrequency = next.frequency;
+        noteNumber = next.note;
     }
 
     void SamplerVoice::restartSameNote(float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers)
     {
+        prepare(noteNumber, samplingRate, noteFrequency, volume, loop, sampleBuffers, [this]() { this->restartSameNote(); });
+    }
+
+    void SamplerVoice::restartSameNote()
+    {
         tempNoteVolume = noteVolume;
-        newSampleBuffers = buffers;
-        nextLoop = loop;
+        newSampleBuffers = next.buffers;
+        nextLoop = next.loop;
         ampEnvelope.restart();
-        noteVolume = volume;
+        noteVolume = next.volume;
         filterEnvelope.restart();
         pitchEnvelope.restart();
         restartVoiceLFOIfNeeded();
@@ -150,6 +197,9 @@ namespace DunneCore
         volumeRamper.init(0.0f);
         filterEnvelope.reset();
         pitchEnvelope.reset();
+        scheduled = {};
+        next = {};
+        current = {};
     }
 
     bool SamplerVoice::prepToGetSamples(int sampleCount, float masterVolume, float pitchOffset,
@@ -229,7 +279,7 @@ namespace DunneCore
         
         return false;
     }
-    
+
     bool SamplerVoice::getSamples(int sampleCount, float *leftOutput, float *rightOutput)
     {
         for (int i=0; i < sampleCount; i++)

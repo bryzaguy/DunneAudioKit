@@ -11,10 +11,7 @@ namespace DunneCore
     , sampleCount(0)
     , startPoint(0.0f)
     , endPoint(0.0f)
-//    , isLooping(false)
     , isInterleaved(false)
-//    , loopStartPoint(0.0f)
-//    , loopEndPoint(0.0f)
     {
     }
     

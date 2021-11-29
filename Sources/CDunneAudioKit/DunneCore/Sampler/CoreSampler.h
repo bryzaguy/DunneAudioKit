@@ -57,11 +57,19 @@ public:
     /// optionally call this to make samples continue looping after note-release
     void setLoopThruRelease(bool value) { loopThruRelease = value; }
     
-    void playNote(unsigned noteNumber, unsigned velocity, LoopDescriptor loop, int64_t offset);
+    void enableNext();
+    void play(int64_t futureTime);
+    void stop(unsigned noteNumber, bool immediate, int64_t offset);
+    
+    void prepareNote(unsigned noteNumber, unsigned velocity, LoopDescriptor loop);
     void stopNote(unsigned noteNumber, bool immediate);
     void sustainPedal(bool down);
     
-    void render(unsigned channelCount, unsigned sampleCount, float *outBuffers[]);
+    void render(unsigned channelCount, unsigned sampleCount, float *outBuffers[], int64_t now);
+    void renderVoice(bool allowSampleRunout, float cutoffMul, float *pOutLeft, float *pOutRight, DunneCore::SamplerVoice *pVoice, float pitchDev, unsigned int sampleCount);
+    void extracted(bool allowSampleRunout, float cutoffMul, int nn, float *pOutLeft, float *pOutRight, DunneCore::SamplerVoice *pVoice, float pitchDev, unsigned int sampleCount);
+    
+    void extracted(bool allowSampleRunout, float cutoffMul, float *pOutLeft, float *pOutRight, DunneCore::SamplerVoice *pVoice, float pitchDev, unsigned int sampleCount);
 
     void  setADSRAttackDurationSeconds(float value);
     float getADSRAttackDurationSeconds(void);
@@ -157,11 +165,10 @@ protected:
     // helper functions
     DunneCore::SamplerVoice *voicePlayingNote(unsigned noteNumber);
     std::list<DunneCore::SampleBuffer*> lookupSamples(unsigned noteNumber, unsigned velocity, LoopDescriptor loop);
-    void play(unsigned noteNumber,
+    void prepare(unsigned noteNumber,
               unsigned velocity,
               bool anotherKeyWasDown,
-              LoopDescriptor loop,
-              int64_t offset);
+              LoopDescriptor loop);
     void stop(unsigned noteNumber, bool immediate);
 };
 

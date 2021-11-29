@@ -3,6 +3,7 @@
 #pragma once
 #include <math.h>
 #include <list>
+#include <functional>
 
 #include "Sampler_Typedefs.h"
 #include "SampleBuffer.h"
@@ -18,9 +19,60 @@
 
 namespace DunneCore
 {
+    struct PlayEvent {
+        unsigned note;
+        float sampleRate, frequency, volume, glideSemitones;
+        double increment;
+        LoopDescriptor loop;
+        std::list<SampleBuffer*> buffers;
+        int64_t futureTime;
+        bool seen = false;
+        enum PlayState {
+            INIT = 0,
+            CREATED,
+            SCHEDULED,
+            QUEUED,
+            READY,
+            PLAYING
+        };
+        PlayState state = INIT;
+        std::function<void()> start;
+        bool loopsAreEqual(LoopDescriptor otherLoop) {
+            if (loop.isLooping != otherLoop.isLooping ||
+                loop.reversed != otherLoop.reversed ||
+                loop.loopStartPoint != otherLoop.loopStartPoint ||
+                loop.loopEndPoint != otherLoop.loopEndPoint ||
+                loop.enabledTracksCount != otherLoop.enabledTracksCount ||
+                loop.mutedCount != otherLoop.mutedCount) return false;
+
+            for (int i = 0; i < loop.mutedCount; i++) {
+                if (loop.mutedStartPoints[i] != otherLoop.mutedStartPoints[i] ||
+                    loop.mutedEndPoints[i] != otherLoop.mutedEndPoints[i]) return false;
+            }
+
+            for (int i = 0; i < loop.enabledTracksCount; i++) {
+                if (loop.enabledTracks[i] != otherLoop.enabledTracks[i]) return false;
+            }
+            return true;
+        };
+        bool equals(PlayEvent event) {
+            return (
+                event.note == note &&
+                event.sampleRate == sampleRate &&
+                event.frequency == frequency &&
+                event.volume == volume &&
+                event.buffers == buffers &&
+                loopsAreEqual(event.loop)
+            );
+        };
+    };
 
     struct SamplerVoice
     {
+        PlayEvent scheduled;
+        PlayEvent next;
+        PlayEvent current;
+
         float samplingRate;
         /// every voice has 1 oscillator
         SampleOscillator oscillator;
@@ -87,20 +139,33 @@ namespace DunneCore
         void updateFilterAdsrParameters() { filterEnvelope.updateParams(); }
         void updatePitchAdsrParameters() { pitchEnvelope.updateParams(); }
         
-        void start(unsigned noteNumber,
+        void prepare(unsigned noteNumber,
                    float sampleRate,
                    float frequency,
                    float volume,
                    std::list<SampleBuffer*> sampleBuffers);
-        void restartNewNote(unsigned noteNumber, float sampleRate, float frequency, float volume, std::list<SampleBuffer*> buffers);
-        void start(unsigned noteNumber,
+        void prepare(unsigned noteNumber,
                    float sampleRate,
                    float frequency,
                    float volume,
                    LoopDescriptor loop,
                    std::list<SampleBuffer*> sampleBuffers);
+        void prepare(unsigned noteNumber,
+                   float sampleRate,
+                   float frequency,
+                   float volume,
+                   LoopDescriptor loop,
+                   std::list<SampleBuffer*> sampleBuffers,
+                   std::function<void()> start);
+
+        void play(int64_t offset);
+        void start();
         void restartNewNote(unsigned noteNumber, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers);
+        void restartNewNote(unsigned noteNumber, float sampleRate, float frequency, float volume, std::list<SampleBuffer*> buffers);
+        void restartNewNote();
         void restartNewNoteLegato(unsigned noteNumber, float sampleRate, float frequency);
+        void restartNewNoteLegato();
+        void restartSameNote();
         void restartSameNote(float volume, LoopDescriptor loop, std::list<SampleBuffer*> sampleBuffers);
         void release(bool loopThruRelease);
         void stop();
