@@ -167,7 +167,7 @@ namespace DunneCore
 
     void SamplerVoice::restartSameNote(float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers)
     {
-        prepare(noteNumber, samplingRate, noteFrequency, volume, loop, sampleBuffers, [this]() { this->restartSameNote(); });
+        prepare(noteNumber, samplingRate, noteFrequency, volume, loop, buffers, [this]() { this->restartSameNote(); });
     }
 
     void SamplerVoice::restartSameNote()
