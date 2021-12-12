@@ -434,12 +434,14 @@ void CoreSampler::render(unsigned channelCount, unsigned sampleCount, float *out
     for (int i=0; i < MAX_POLYPHONY; i++, pVoice++)
     {
         pVoice->restartVoiceLFO = restartVoiceLFO;
-        
+
+        if (pVoice->next.state != DunneCore::PlayEvent::INIT && !pVoice->next.seen)
+        {
+            printf("offset: %lld\n", pVoice->next.futureTime - (now + sampleCount));
+            pVoice->next.seen = true;
+        }
+
         if (pVoice->next.state == DunneCore::PlayEvent::QUEUED && pVoice->next.futureTime >= now && pVoice->next.futureTime < (now + sampleCount)) {
-            if (!pVoice->next.seen)
-            {
-                pVoice->next.seen = true;
-            }
             pVoice->next.state = DunneCore::PlayEvent::READY;
         }
         
