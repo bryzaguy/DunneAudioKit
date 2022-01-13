@@ -41,7 +41,8 @@ DSPRef akSamplerCreateDSP() {
     return new SamplerDSP();
 }
 
-void akSamplerLoadData(DSPRef pDSP, SampleDataDescriptor *pSDD) {
+void akSamplerLoadData(int ident, DSPRef pDSP, SampleDataDescriptor *pSDD) {
+    ((SamplerDSP*)pDSP)->ident = ident;
     ((SamplerDSP*)pDSP)->loadSampleData(*pSDD);
 }
 
@@ -54,7 +55,7 @@ void akSamplerLoadCompressedFile(DSPRef pDSP, SampleFileDescriptor *pSFD)
         printf("Wavpack error loading %s: %s\n", pSFD->path, errMsg);
         return;
     }
-
+    
     SampleDataDescriptor sdd;
     sdd.sampleDescriptor = pSFD->sampleDescriptor;
     sdd.sampleRate = (float)WavpackGetSampleRate(wpc);
@@ -103,10 +104,9 @@ void akSamplerSetLoopThruRelease(DSPRef pDSP, bool value) {
     ((SamplerDSP*)pDSP)->setLoopThruRelease(value);
 }
 
-void akSamplerPlayNote(DSPRef pDSP, int64_t offset)
+void akSamplerPlayNote(DSPRef pDSP, int64_t sampleTime)
 {
-    auto now = ((SamplerDSP*)pDSP)->currentTime();
-    ((SamplerDSP*)pDSP)->play(offset + now);
+    ((SamplerDSP*)pDSP)->play(sampleTime);
 }
 
 void akSamplerPrepareNote(DSPRef pDSP, UInt8 noteNumber, UInt8 velocity, LoopDescriptor loop)
@@ -410,8 +410,6 @@ void SamplerDSP::process(FrameRange range)
 
     memset(pLeft, 0, range.count * sizeof(float));
     memset(pRight, 0, range.count * sizeof(float));
-    
-    CoreSampler::enableNext();
 
     // process in chunks of maximum length CORESAMPLER_CHUNKSIZE
     for (int frameIndex = 0; frameIndex < range.count; frameIndex += CORESAMPLER_CHUNKSIZE) {
@@ -450,6 +448,7 @@ void SamplerDSP::process(FrameRange range)
         outBuffers[0] = (float *)outputBufferList->mBuffers[0].mData + frameOffset;
         outBuffers[1] = (float *)outputBufferList->mBuffers[1].mData + frameOffset;
         unsigned channelCount = outputBufferList->mNumberBuffers;
+        
         CoreSampler::render(channelCount, chunkSize, outBuffers, now + frameOffset);
     }
 }

@@ -61,8 +61,13 @@ namespace DunneCore
                 float left = 0, right = 0;
                 auto reversedIndex = loop.loopEndPoint - (indexPoint - loop.loopStartPoint);
                 buffer->interp(loop.reversed ? reversedIndex : indexPoint, &left, &right, gain * muteVolume * fadeGain);
-                *leftOutput += left;
-                *rightOutput += right;
+                if (loop.phaseInvert) {
+                    *leftOutput += left * -1;
+                    *rightOutput += right * -1;
+                } else {
+                    *leftOutput += left;
+                    *rightOutput += right;
+                }
             }
             
             indexPoint += multiplier * increment;

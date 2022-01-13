@@ -6,7 +6,7 @@
 
 typedef struct
 {
-    bool isLooping, reversed;
+    bool isLooping, reversed, phaseInvert;
     unsigned int loopStartPoint, loopEndPoint,
         enabledTracksCount, *enabledTracks,
         mutedCount, *mutedStartPoints, *mutedEndPoints;

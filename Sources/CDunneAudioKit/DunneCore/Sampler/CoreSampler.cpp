@@ -43,7 +43,8 @@ struct CoreSampler::InternalData {
 };
 
 CoreSampler::CoreSampler()
-: currentSampleRate(44100.0f)    // sensible guess
+: currentSampleRate(48000.0f)    // sensible guess
+, ident(0)
 , isKeyMapValid(false)
 , isFilterEnabled(false)
 , restartVoiceLFO(false)
@@ -235,21 +236,11 @@ DunneCore::SamplerVoice *CoreSampler::voicePlayingNote(unsigned noteNumber)
     return 0;
 }
 
-void CoreSampler::enableNext()
-{
-    for (int i=0; i < MAX_POLYPHONY; i++)
-    {
-        if (data->voice[i].next.state == DunneCore::PlayEvent::SCHEDULED) {
-            data->voice[i].next.state = DunneCore::PlayEvent::QUEUED;
-        }
-    }
-}
-
-void CoreSampler::play(int64_t futureTime)
+void CoreSampler::play(int64_t sampleTime)
 {
     for (auto &voice : data->preparedVoices)
     {
-        voice->play(futureTime);
+        voice->play(sampleTime);
     }
     data->preparedVoices.clear();
 }
@@ -435,18 +426,10 @@ void CoreSampler::render(unsigned channelCount, unsigned sampleCount, float *out
     {
         pVoice->restartVoiceLFO = restartVoiceLFO;
 
-        if (pVoice->next.state != DunneCore::PlayEvent::INIT && !pVoice->next.seen)
-        {
-            printf("offset: %lld\n", pVoice->next.futureTime - (now + sampleCount));
-            pVoice->next.seen = true;
-        }
+        auto nextTime = pVoice->next.sampleTime;
 
-        if (pVoice->next.state == DunneCore::PlayEvent::QUEUED && pVoice->next.futureTime >= now && pVoice->next.futureTime < (now + sampleCount)) {
-            pVoice->next.state = DunneCore::PlayEvent::READY;
-        }
-        
-        if (pVoice->next.state == DunneCore::PlayEvent::READY) {
-            auto offset = (unsigned int)(pVoice->next.futureTime - now);
+        if (pVoice->next.state == DunneCore::PlayEvent::CREATED && nextTime >= now && nextTime < (now + sampleCount)) {
+            auto offset = (unsigned int)(nextTime - now);
             if (offset > 0) {
                 renderVoice(allowSampleRunout, cutoffMul, pOutLeft, pOutRight, pVoice, pitchDev, offset);
 

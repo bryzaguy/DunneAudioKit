@@ -25,14 +25,10 @@ namespace DunneCore
         double increment;
         LoopDescriptor loop;
         std::list<SampleBuffer*> buffers;
-        int64_t futureTime;
-        bool seen = false;
+        int64_t sampleTime = 0;
         enum PlayState {
             INIT = 0,
             CREATED,
-            SCHEDULED,
-            QUEUED,
-            READY,
             PLAYING
         };
         PlayState state = INIT;
@@ -69,7 +65,6 @@ namespace DunneCore
 
     struct SamplerVoice
     {
-        PlayEvent scheduled;
         PlayEvent next;
         PlayEvent current;
 
@@ -158,7 +153,7 @@ namespace DunneCore
                    std::list<SampleBuffer*> sampleBuffers,
                    std::function<void()> start);
 
-        void play(int64_t offset);
+        void play(int64_t sampleTime);
         void start();
         void restartNewNote(unsigned noteNumber, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers);
         void restartNewNote(unsigned noteNumber, float sampleRate, float frequency, float volume, std::list<SampleBuffer*> buffers);

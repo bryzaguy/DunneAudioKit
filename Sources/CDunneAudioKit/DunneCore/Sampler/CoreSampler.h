@@ -27,6 +27,7 @@ public:
     CoreSampler();
     ~CoreSampler();
     
+    int ident;
     /// returns system error code, nonzero only if a problem occurs
     int init(double sampleRate);
     
@@ -56,9 +57,8 @@ public:
     
     /// optionally call this to make samples continue looping after note-release
     void setLoopThruRelease(bool value) { loopThruRelease = value; }
-    
-    void enableNext();
-    void play(int64_t futureTime);
+
+    void play(int64_t sampleTime);
     void stop(unsigned noteNumber, bool immediate, int64_t offset);
     
     void prepareNote(unsigned noteNumber, unsigned velocity, LoopDescriptor loop);

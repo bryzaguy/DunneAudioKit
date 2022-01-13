@@ -21,7 +21,7 @@ namespace DunneCore
         volumeRamper.init(0.0f);
         tempGain = 0.0f;
         next = {};
-        scheduled = {};
+        current = {};
     }
 
     void SamplerVoice::prepare(unsigned note, float sampleRate, float frequency, float volume, std::list<SampleBuffer*> buffers)
@@ -69,17 +69,12 @@ namespace DunneCore
         if (!current.equals(event) || current.state != PlayEvent::PLAYING) {
             event.state = PlayEvent::CREATED;
         }
-        scheduled = event;
+        next = event;
     }
 
-    void SamplerVoice::play(int64_t futureTime)
+    void SamplerVoice::play(int64_t sampleTime)
     {
-        if (scheduled.state == PlayEvent::CREATED) {
-            auto event = scheduled;
-            event.state = PlayEvent::SCHEDULED;
-            event.futureTime = futureTime;
-            next = event;
-        }
+        next.sampleTime = sampleTime;
     }
 
     void SamplerVoice::start()
@@ -197,7 +192,6 @@ namespace DunneCore
         volumeRamper.init(0.0f);
         filterEnvelope.reset();
         pitchEnvelope.reset();
-        scheduled = {};
         next = {};
         current = {};
     }

@@ -460,7 +460,7 @@ public class Sampler: Node {
         self.loadSFZ(path: sfzPath, fileName: sfzFileName)
     }
 
-    internal func loadAudioFile(from sampleDescriptor: SampleDescriptor, file: AVAudioFile) {
+    internal func loadAudioFile(id: Int32? = nil, from sampleDescriptor: SampleDescriptor, file: AVAudioFile) {
         guard let floatChannelData = file.toFloatChannelData() else { return }
 
         let sampleRate = Float(file.fileFormat.sampleRate)
@@ -477,7 +477,7 @@ public class Sampler: Node {
                                                   sampleCount: sampleCount,
                                                   data: data.baseAddress)
 
-            akSamplerLoadData(au.dsp, &descriptor)
+            akSamplerLoadData(id ?? 0, au.dsp, &descriptor)
         }
     }
 
@@ -493,9 +493,9 @@ public class Sampler: Node {
 
     /// Load data from sample descriptor
     /// - Parameter sampleDataDescriptor: Sample descriptor information
-    public func loadRawSampleData(from sampleDataDescriptor: SampleDataDescriptor) {
+    public func loadRawSampleData(id: Int32? = nil, from sampleDataDescriptor: SampleDataDescriptor) {
         var copy = sampleDataDescriptor
-        akSamplerLoadData(au.dsp, &copy)
+        akSamplerLoadData(id ?? 0, au.dsp, &copy)
     }
 
     /// Load data from compressed file
@@ -514,7 +514,7 @@ public class Sampler: Node {
     /// - Parameters:
     ///   - noteNumber: MIDI Note number
     ///   - frequency: Frequency in Hertz
-    public func setNoteFrequency(noteNumber: MIDINoteNumber, frequency: AUValue) {
+    public func setNoteFrequency(noteNumber: UInt8, frequency: AUValue) {
         akSamplerSetNoteFrequency(au.dsp, Int32(noteNumber), frequency)
     }
 
@@ -537,8 +537,8 @@ public class Sampler: Node {
     /// Play the sampler
     /// - Parameters:
     ///   - offset: Time in samples to wait to play
-    public func play(offset: Int64) {
-        akSamplerPlayNote(au.dsp, offset)
+    public func play(sampleTime: Int64) {
+        akSamplerPlayNote(au.dsp, sampleTime)
     }
 
     /// Prepare the sampler
@@ -546,7 +546,7 @@ public class Sampler: Node {
     ///   - noteNumber: MIDI Note Number
     ///   - velocity: Velocity of the note
     ///   - channel: MIDI Channel
-    public func prepare(noteNumber: MIDINoteNumber,
+    public func prepare(noteNumber: UInt8,
                      velocity: MIDIVelocity,
                      loop: LoopDescriptor) {
         akSamplerPrepareNote(au.dsp, noteNumber, velocity, loop)
@@ -554,13 +554,13 @@ public class Sampler: Node {
 
     /// Stop the sampler playback of a specific note
     /// - Parameter noteNumber: MIDI Note number
-    public func stop(noteNumber: MIDINoteNumber, channel: MIDIChannel = 0) {
+    public func stop(noteNumber: UInt8, channel: MIDIChannel = 0) {
         akSamplerStopNote(au.dsp, noteNumber, false)
     }
 
     /// Stop and immediately silence a note
     /// - Parameter noteNumber: MIDI note number
-    public func silence(noteNumber: MIDINoteNumber) {
+    public func silence(noteNumber: UInt8) {
         akSamplerStopNote(au.dsp, noteNumber, true)
     }
 
