@@ -164,7 +164,7 @@ protected:
     
     // helper functions
     DunneCore::SamplerVoice *voicePlayingNote(unsigned noteNumber);
-    std::list<DunneCore::SampleBuffer*> lookupSamples(unsigned noteNumber, unsigned velocity, LoopDescriptor loop);
+    DunneCore::SampleBufferGroup lookupSamples(unsigned noteNumber, unsigned velocity, LoopDescriptor loop);
     void prepare(unsigned noteNumber,
               unsigned velocity,
               bool anotherKeyWasDown,

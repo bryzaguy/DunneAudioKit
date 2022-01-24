@@ -37,6 +37,8 @@ struct SamplerDSP : DSPBase, CoreSampler
     };
 };
 
+
+
 DSPRef akSamplerCreateDSP() {
     return new SamplerDSP();
 }

@@ -7,6 +7,7 @@
 
 #include <math.h>
 #include <list>
+#include <map>
 
 // number of voices
 #define MAX_POLYPHONY 64
@@ -23,6 +24,7 @@ struct CoreSampler::InternalData {
     
     // maps MIDI note numbers to "closest" samples (all velocity layers)
     std::list<DunneCore::KeyMappedSampleBuffer*> keyMap[MIDI_NOTENUMBERS];
+    std::map<std::list<DunneCore::SampleBuffer*>, DunneCore::SampleBufferGroup> sampleBufferGroups;
     
     DunneCore::AHDSHREnvelopeParameters ampEnvelopeParameters;
     DunneCore::ADSREnvelopeParameters filterEnvelopeParameters;
@@ -133,7 +135,7 @@ void CoreSampler::loadSampleData(SampleDataDescriptor& sdd)
     if (sdd.sampleDescriptor.endPoint > 0.0f)   pBuf->endPoint = sdd.sampleDescriptor.endPoint;
 }
 
-std::list<DunneCore::SampleBuffer*> CoreSampler::lookupSamples(unsigned noteNumber, unsigned velocity, LoopDescriptor loop)
+DunneCore::SampleBufferGroup CoreSampler::lookupSamples(unsigned noteNumber, unsigned velocity, LoopDescriptor loop)
 {
     std::list<DunneCore::SampleBuffer*> result;
     const auto buffers = data->keyMap[noteNumber];
@@ -159,8 +161,16 @@ std::list<DunneCore::SampleBuffer*> CoreSampler::lookupSamples(unsigned noteNumb
                 result.push_back(pBuf);
         }
     }
-    
-    return result;
+
+    auto findGroup = data->sampleBufferGroups.find(result);
+    if (findGroup != data->sampleBufferGroups.end()) {
+        return findGroup->second;
+    } else {
+        DunneCore::SampleBufferGroup group;
+        group.init(result);
+        data->sampleBufferGroups.insert({result, group});
+        return group;
+    }
 }
 
 void CoreSampler::setNoteFrequency(int noteNumber, float noteFrequency)
@@ -276,7 +286,7 @@ void CoreSampler::prepare(unsigned noteNumber, unsigned velocity, bool anotherKe
     if (stoppingAllVoices) return;
  
     auto pBufs = lookupSamples(noteNumber, velocity, loop);
-    if (pBufs.size() == 0) return;  // don't crash if someone forgets to build map
+    if (pBufs.sampleBuffers.size() == 0) return;  // don't crash if someone forgets to build map
 
     float noteFrequency = data->tuningTable[noteNumber];
     
@@ -362,7 +372,7 @@ void CoreSampler::stop(unsigned noteNumber, bool immediate)
         {
             unsigned velocity = 100;
             auto pBufs = lookupSamples(key, velocity, pVoice->currentLoop);
-            if (pBufs.size() == 0) return;  // don't crash if someone forgets to build map
+            if (pBufs.sampleBuffers.size() == 0) return;  // don't crash if someone forgets to build map
             if (pVoice->noteNumber >= 0)
                 pVoice->restartNewNote(key, currentSampleRate, data->tuningTable[key], velocity / 127.0f, pBufs);
             else

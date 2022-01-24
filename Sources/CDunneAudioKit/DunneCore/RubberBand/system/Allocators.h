@@ -21,6 +21,8 @@
     you must obtain a valid commercial licence before doing so.
 */
 
+#define MALLOC_IS_ALIGNED 1
+
 #ifndef RUBBERBAND_ALLOCATORS_H
 #define RUBBERBAND_ALLOCATORS_H
 

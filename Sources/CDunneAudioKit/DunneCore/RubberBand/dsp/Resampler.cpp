@@ -21,8 +21,10 @@
     you must obtain a valid commercial licence before doing so.
 */
 
+#define USE_SPEEX 1
+
 #include "Resampler.h"
-#include "base/Profiler.h"
+#include "../base/Profiler.h"
 
 #include <cstdlib>
 #include <cmath>
@@ -30,8 +32,8 @@
 #include <iostream>
 #include <algorithm>
 
-#include "system/Allocators.h"
-#include "system/VectorOps.h"
+#include "../system/Allocators.h"
+#include "../system/VectorOps.h"
 
 #ifdef HAVE_IPP
 #include <ippversion.h>
@@ -51,7 +53,7 @@
 #endif
 
 #ifdef USE_SPEEX
-#include "speex/speex_resampler.h"
+#include "../speex/speex_resampler.h"
 #endif
 
 #ifndef HAVE_IPP

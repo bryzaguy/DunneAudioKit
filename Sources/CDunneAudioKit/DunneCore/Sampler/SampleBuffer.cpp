@@ -4,7 +4,6 @@
 
 namespace DunneCore
 {
-
     SampleBuffer::SampleBuffer()
     : samples(0)
     , channelCount(0)
@@ -32,5 +31,27 @@ namespace DunneCore
     void SampleBuffer::deinit()
     {
         samples = 0;
+    }
+
+    void SampleBufferGroup::init(std::list<SampleBuffer*> buffers) {
+        if (buffers.size() == 0) return;
+        
+        this->sampleBuffers = buffers;
+        
+        auto sampleRate = sampleBuffers.front()->sampleRate;
+
+        RubberBand::RubberBandStretcher::Options options = 0;
+//        options |= RubberBand::RubberBandStretcher::OptionWindowShort;
+        options |= RubberBand::RubberBandStretcher::OptionProcessRealTime;
+        options |= RubberBand::RubberBandStretcher::OptionDetectorCompound;
+        options |= RubberBand::RubberBandStretcher::OptionThreadingNever;
+        options |= RubberBand::RubberBandStretcher::OptionTransientsCrisp;
+        double frequencyshift = 1.0;
+        double ratio = 1.0;
+        RubberBand::RubberBandStretcher ts(sampleRate, 2, options, ratio, frequencyshift);
+        
+        ts.setMaxProcessSize(16);
+        
+        stretcher = &ts;
     }
 }

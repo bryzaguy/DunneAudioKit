@@ -9,7 +9,6 @@
 
 namespace DunneCore
 {
-
     struct SampleOscillator
     {
         bool isLooping;     // true until note released
@@ -19,14 +18,13 @@ namespace DunneCore
         double muteVolume = 1;
         unsigned int muteIndex = 0;
         double fadeGain = 0;
-        
-        
+
         void setPitchOffsetSemitones(double semitones) { multiplier = pow(2.0, semitones/12.0); }
         
         // return true if we run out of samples
-        inline bool getSamplePair(std::list<SampleBuffer*> sampleBuffers, LoopDescriptor loop, int sampleCount, float *leftOutput, float *rightOutput, float gain)
+        inline bool getSamplePair(SampleBufferGroup sampleBuffers, LoopDescriptor loop, int sampleCount, float *leftOutput, float *rightOutput, float gain)
         {
-            auto sampleBuffer = sampleBuffers.front();
+            auto sampleBuffer = sampleBuffers.sampleBuffers.front();
             auto loopEndPoint = loop.loopEndPoint == 0 ? sampleBuffer->endPoint : loop.loopEndPoint;
             if (sampleBuffer == NULL || indexPoint > sampleBuffer->endPoint) {
                 muteIndex = 0;
@@ -57,16 +55,19 @@ namespace DunneCore
             
             *leftOutput = 0;
             *rightOutput = 0;
-            for (const auto buffer : sampleBuffers) {
+            
+            auto finalGain = gain * muteVolume * fadeGain;
+            
+            if (finalGain > 0) {
                 float left = 0, right = 0;
                 auto reversedIndex = loop.loopEndPoint - (indexPoint - loop.loopStartPoint);
-                buffer->interp(loop.reversed ? reversedIndex : indexPoint, &left, &right, gain * muteVolume * fadeGain);
+                sampleBuffers.interp(loop.reversed ? reversedIndex : indexPoint, &left, &right);
                 if (loop.phaseInvert) {
-                    *leftOutput += left * -1;
-                    *rightOutput += right * -1;
+                    *leftOutput += left * -1 * finalGain;
+                    *rightOutput += right * -1 * finalGain;
                 } else {
-                    *leftOutput += left;
-                    *rightOutput += right;
+                    *leftOutput += left * finalGain;
+                    *rightOutput += right * finalGain;
                 }
             }
             

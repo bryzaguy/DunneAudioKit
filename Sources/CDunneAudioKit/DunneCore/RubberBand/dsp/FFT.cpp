@@ -21,12 +21,14 @@
     you must obtain a valid commercial licence before doing so.
 */
 
+#define HAVE_VDSP 1
+
 #include "FFT.h"
-#include "system/Thread.h"
-#include "base/Profiler.h"
-#include "system/Allocators.h"
-#include "system/VectorOps.h"
-#include "system/VectorOpsComplex.h"
+#include "../system/Thread.h"
+#include "../base/Profiler.h"
+#include "../system/Allocators.h"
+#include "../system/VectorOps.h"
+#include "../system/VectorOpsComplex.h"
 
 //#define FFT_MEASUREMENT 1
 

@@ -21,6 +21,8 @@
     you must obtain a valid commercial licence before doing so.
 */
 
+#define USE_PTHREADS 1
+
 #ifndef RUBBERBAND_THREAD_H
 #define RUBBERBAND_THREAD_H
 

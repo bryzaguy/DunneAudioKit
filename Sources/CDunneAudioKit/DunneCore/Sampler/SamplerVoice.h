@@ -24,7 +24,7 @@ namespace DunneCore
         float sampleRate, frequency, volume, glideSemitones;
         double increment;
         LoopDescriptor loop;
-        std::list<SampleBuffer*> buffers;
+        SampleBufferGroup buffers;
         int64_t sampleTime = 0;
         enum PlayState {
             INIT = 0,
@@ -57,7 +57,7 @@ namespace DunneCore
                 event.sampleRate == sampleRate &&
                 event.frequency == frequency &&
                 event.volume == volume &&
-                event.buffers == buffers &&
+                event.buffers.sampleBuffers == buffers.sampleBuffers &&
                 loopsAreEqual(event.loop)
             );
         };
@@ -71,9 +71,9 @@ namespace DunneCore
         float samplingRate;
         /// every voice has 1 oscillator
         SampleOscillator oscillator;
-
+        
         /// a pointer to the sample buffer for that oscillator
-        std::list<SampleBuffer*> sampleBuffers;
+        SampleBufferGroup sampleBuffers;
         LoopDescriptor currentLoop;
         
         /// two filters (left/right)
@@ -114,7 +114,7 @@ namespace DunneCore
         float tempNoteVolume;
 
         /// Next sample buffer to use at restart
-        std::list<SampleBuffer*> newSampleBuffers;
+        SampleBufferGroup newSampleBuffers;
         LoopDescriptor nextLoop;
 
         /// product of global volume, note volume
@@ -126,7 +126,7 @@ namespace DunneCore
         /// true if filter should be used
         bool isFilterEnabled;
         
-        SamplerVoice() : noteNumber(-1) {}
+        SamplerVoice() : noteNumber(-1), sampleBuffers(), newSampleBuffers() {}
 
         void init(double sampleRate);
 
@@ -138,30 +138,30 @@ namespace DunneCore
                    float sampleRate,
                    float frequency,
                    float volume,
-                   std::list<SampleBuffer*> sampleBuffers);
+                   SampleBufferGroup sampleBuffers);
         void prepare(unsigned noteNumber,
                    float sampleRate,
                    float frequency,
                    float volume,
                    LoopDescriptor loop,
-                   std::list<SampleBuffer*> sampleBuffers);
+                   SampleBufferGroup sampleBuffers);
         void prepare(unsigned noteNumber,
                    float sampleRate,
                    float frequency,
                    float volume,
                    LoopDescriptor loop,
-                   std::list<SampleBuffer*> sampleBuffers,
+                   SampleBufferGroup sampleBuffers,
                    std::function<void()> start);
 
         void play(int64_t sampleTime);
         void start();
-        void restartNewNote(unsigned noteNumber, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers);
-        void restartNewNote(unsigned noteNumber, float sampleRate, float frequency, float volume, std::list<SampleBuffer*> buffers);
+        void restartNewNote(unsigned noteNumber, float sampleRate, float frequency, float volume, LoopDescriptor loop, SampleBufferGroup buffers);
+        void restartNewNote(unsigned noteNumber, float sampleRate, float frequency, float volume, SampleBufferGroup buffers);
         void restartNewNote();
         void restartNewNoteLegato(unsigned noteNumber, float sampleRate, float frequency);
         void restartNewNoteLegato();
         void restartSameNote();
-        void restartSameNote(float volume, LoopDescriptor loop, std::list<SampleBuffer*> sampleBuffers);
+        void restartSameNote(float volume, LoopDescriptor loop, SampleBufferGroup sampleBuffers);
         void release(bool loopThruRelease);
         void stop();
         

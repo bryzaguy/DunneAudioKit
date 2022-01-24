@@ -24,17 +24,17 @@ namespace DunneCore
         current = {};
     }
 
-    void SamplerVoice::prepare(unsigned note, float sampleRate, float frequency, float volume, std::list<SampleBuffer*> buffers)
+    void SamplerVoice::prepare(unsigned note, float sampleRate, float frequency, float volume, SampleBufferGroup buffers)
     {
         prepare(note, sampleRate, frequency, volume, this->currentLoop, buffers);
     }
 
-    void SamplerVoice::prepare(unsigned note, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers)
+    void SamplerVoice::prepare(unsigned note, float sampleRate, float frequency, float volume, LoopDescriptor loop, SampleBufferGroup buffers)
     {
         prepare(note, sampleRate, frequency, volume, loop, buffers, [this]() { this->start(); });
     }
 
-    void SamplerVoice::prepare(unsigned note, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers,
+    void SamplerVoice::prepare(unsigned note, float sampleRate, float frequency, float volume, LoopDescriptor loop, SampleBufferGroup buffers,
         std::function<void()> start)
     {
         PlayEvent event;
@@ -55,7 +55,7 @@ namespace DunneCore
         event.loop.enabledTracks = enabledTracks;
         event.start = start;
         
-        auto buffer = buffers.front();
+        auto buffer = buffers.sampleBuffers.front();
         event.increment = (buffer->sampleRate / sampleRate) * (frequency / buffer->noteFrequency);
         
         event.glideSemitones = 0.0f;
@@ -110,12 +110,12 @@ namespace DunneCore
         restartVoiceLFOIfNeeded();
     }
 
-    void SamplerVoice::restartNewNote(unsigned note, float sampleRate, float frequency, float volume, std::list<SampleBuffer*> buffers)
+    void SamplerVoice::restartNewNote(unsigned note, float sampleRate, float frequency, float volume, SampleBufferGroup buffers)
     {
         restartNewNote(note, sampleRate, frequency, volume, this->currentLoop, buffers);
     }
 
-    void SamplerVoice::restartNewNote(unsigned note, float sampleRate, float frequency, float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers)
+    void SamplerVoice::restartNewNote(unsigned note, float sampleRate, float frequency, float volume, LoopDescriptor loop, SampleBufferGroup buffers)
     {
         prepare(note, sampleRate, frequency, volume, loop, buffers, [this]() { this->restartNewNote(); });
     }
@@ -160,7 +160,7 @@ namespace DunneCore
         noteNumber = next.note;
     }
 
-    void SamplerVoice::restartSameNote(float volume, LoopDescriptor loop, std::list<SampleBuffer*> buffers)
+    void SamplerVoice::restartSameNote(float volume, LoopDescriptor loop, SampleBufferGroup buffers)
     {
         prepare(noteNumber, samplingRate, noteFrequency, volume, loop, buffers, [this]() { this->restartSameNote(); });
     }
@@ -216,7 +216,7 @@ namespace DunneCore
                 volumeRamper.reinit(ampEnvelope.getSample(), sampleCount);
                 sampleBuffers = newSampleBuffers;
                 currentLoop = nextLoop;
-                auto sampleBuffer = sampleBuffers.front();
+                auto sampleBuffer = sampleBuffers.sampleBuffers.front();
                 oscillator.increment = (sampleBuffer->sampleRate / samplingRate) * (noteFrequency / sampleBuffer->noteFrequency);
                 oscillator.indexPoint = nextLoop.loopStartPoint;
                 oscillator.muteIndex = 0;
@@ -293,6 +293,7 @@ namespace DunneCore
                 *rightOutput++ += rightSample;
             }
         }
+
         return false;
     }
 

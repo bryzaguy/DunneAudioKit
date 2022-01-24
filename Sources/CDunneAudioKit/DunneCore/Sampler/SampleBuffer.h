@@ -1,12 +1,14 @@
 // Copyright AudioKit. All Rights Reserved.
 
 #pragma once
+#include <list>
+
+#include "../RubberBand/rubberband/RubberBandStretcher.h"
+
 namespace DunneCore
 {
-
     // SampleBuffer represents an array of sample data, which can be addressed with a real-valued
     // "index" via linear interpolation.
-    
     struct SampleBuffer
     {
         float *samples;
@@ -16,7 +18,7 @@ namespace DunneCore
         float startPoint, endPoint;
         bool isInterleaved;
         float noteFrequency;
-        
+
         SampleBuffer();
         ~SampleBuffer();
         
@@ -35,7 +37,7 @@ namespace DunneCore
         }
         
         // Use double for the real-valued index, because oscillators will need the extra precision.
-        inline float interp(double fIndex, float gain)
+        inline float interp(double fIndex)
         {
             if (samples == 0 || sampleCount == 0) return 0.0f;
             
@@ -46,10 +48,10 @@ namespace DunneCore
             
             float si = ri < sampleCount ? samples[ri] : 0.0f;
             float sj = rj < sampleCount ? samples[rj] : 0.0f;
-            return (float)(gain * ((1.0 - f) * si + f * sj));
+            return (float)((1.0 - f) * si + f * sj);
         }
         
-        inline void interp(double fIndex, float *leftOutput, float *rightOutput, float gain)
+        inline void interp(double fIndex, float *leftOutput, float *rightOutput)
         {
             if (samples == 0 || sampleCount == 0)
             {
@@ -58,7 +60,7 @@ namespace DunneCore
             }
             if (channelCount == 1)
             {
-                *leftOutput = *rightOutput = interp(fIndex, gain);
+                *leftOutput = *rightOutput = interp(fIndex);
                 return;
             }
             
@@ -69,13 +71,31 @@ namespace DunneCore
             
             float si = ri < sampleCount ? samples[ri] : 0.0f;
             float sj = rj < sampleCount ? samples[rj] : 0.0f;
-            *leftOutput = (float)(gain * ((1.0 - f) * si + f * sj));
+            *leftOutput = (float)((1.0 - f) * si + f * sj);
             si = ri < sampleCount ? samples[sampleCount + ri] : 0.0f;
             sj = rj < sampleCount ? samples[sampleCount + rj] : 0.0f;
-            *rightOutput = (float)(gain * ((1.0f - f) * si + f * sj));
+            *rightOutput = (float)((1.0f - f) * si + f * sj);
         }
     };
     
+    class SampleBufferGroup {
+    public:
+        std::list<SampleBuffer*> sampleBuffers;
+        RubberBand::RubberBandStretcher* stretcher;
+
+        void init(std::list<SampleBuffer*> buffers);
+        
+        inline void interp(double index, float *leftSample, float *rightSample) {
+            for (const auto buffer : sampleBuffers) {
+                float left = 0, right = 0;
+                buffer->interp(index, &left, &right);
+
+                *leftSample += left;
+                *rightSample += right;
+            }
+        }
+    };
+
     // KeyMappedSampleBuffer is a derived version with added MIDI note-number and velocity ranges
     struct KeyMappedSampleBuffer : public SampleBuffer
     {
