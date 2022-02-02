@@ -24,7 +24,7 @@ struct CoreSampler::InternalData {
     
     // maps MIDI note numbers to "closest" samples (all velocity layers)
     std::list<DunneCore::KeyMappedSampleBuffer*> keyMap[MIDI_NOTENUMBERS];
-    std::map<std::list<DunneCore::SampleBuffer*>, DunneCore::SampleBufferGroup> sampleBufferGroups;
+    std::map<unsigned, DunneCore::SampleBufferGroup> sampleBufferGroups;
     
     DunneCore::AHDSHREnvelopeParameters ampEnvelopeParameters;
     DunneCore::ADSREnvelopeParameters filterEnvelopeParameters;
@@ -161,14 +161,15 @@ DunneCore::SampleBufferGroup CoreSampler::lookupSamples(unsigned noteNumber, uns
                 result.push_back(pBuf);
         }
     }
-
-    auto findGroup = data->sampleBufferGroups.find(result);
+    
+    DunneCore::SampleBufferGroup group;
+    group.init(result, loop);
+    auto findGroup = data->sampleBufferGroups.find(noteNumber);
     if (findGroup != data->sampleBufferGroups.end()) {
+        findGroup->second = group;
         return findGroup->second;
     } else {
-        DunneCore::SampleBufferGroup group;
-        group.init(result);
-        data->sampleBufferGroups.insert({result, group});
+        data->sampleBufferGroups.insert({noteNumber, group});
         return group;
     }
 }

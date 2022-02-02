@@ -82,11 +82,13 @@ namespace DunneCore
         sampleBuffers = next.buffers;
         currentLoop = next.loop;
 
-        oscillator.indexPoint = next.loop.loopStartPoint;
+        oscillator.indexPoint = 0;
         oscillator.muteIndex = 0;
         oscillator.increment = next.increment;
         oscillator.multiplier = 1.0;
         oscillator.isLooping = next.loop.isLooping;
+        
+        sampleBuffers.stretcher->reset();
         
         noteVolume = next.volume;
         ampEnvelope.start();
@@ -218,9 +220,10 @@ namespace DunneCore
                 currentLoop = nextLoop;
                 auto sampleBuffer = sampleBuffers.sampleBuffers.front();
                 oscillator.increment = (sampleBuffer->sampleRate / samplingRate) * (noteFrequency / sampleBuffer->noteFrequency);
-                oscillator.indexPoint = nextLoop.loopStartPoint;
+                oscillator.indexPoint = 0;
                 oscillator.muteIndex = 0;
                 oscillator.isLooping = nextLoop.isLooping;
+                sampleBuffers.stretcher->reset();
             }
         }
         else

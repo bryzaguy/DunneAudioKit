@@ -36,8 +36,8 @@ namespace DunneCore
         bool loopsAreEqual(LoopDescriptor otherLoop) {
             if (loop.isLooping != otherLoop.isLooping ||
                 loop.reversed != otherLoop.reversed ||
-                loop.loopStartPoint != otherLoop.loopStartPoint ||
-                loop.loopEndPoint != otherLoop.loopEndPoint ||
+                loop.startPoint != otherLoop.startPoint ||
+                loop.endPoint != otherLoop.endPoint ||
                 loop.enabledTracksCount != otherLoop.enabledTracksCount ||
                 loop.mutedCount != otherLoop.mutedCount) return false;
 

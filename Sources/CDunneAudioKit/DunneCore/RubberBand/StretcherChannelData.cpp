@@ -129,7 +129,7 @@ RubberBandStretcher::Impl::ChannelData::setSizes(size_t windowSize,
 
         // no need to reallocate buffers, just reselect fft
 
-        //!!! we can't actually do this without locking against the
+        //we can't actually do this without locking against the
         //process thread, can we?  we need to zero the mag/phase
         //buffers without interference
 

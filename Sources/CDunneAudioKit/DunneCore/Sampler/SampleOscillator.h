@@ -25,59 +25,37 @@ namespace DunneCore
         inline bool getSamplePair(SampleBufferGroup sampleBuffers, LoopDescriptor loop, int sampleCount, float *leftOutput, float *rightOutput, float gain)
         {
             auto sampleBuffer = sampleBuffers.sampleBuffers.front();
-            auto loopEndPoint = loop.loopEndPoint == 0 ? sampleBuffer->endPoint : loop.loopEndPoint;
-            if (sampleBuffer == NULL || indexPoint > sampleBuffer->endPoint) {
+            if (sampleBuffer == NULL || indexPoint > (sampleBuffer->endPoint - sampleBuffer->startPoint)) {
                 muteIndex = 0;
                 return true;
             }
+
+//            auto fadeSize = (int)sampleBuffer->sampleRate / 100;
+//            if (muteIndex < loop.mutedCount) {
+//                auto start = loop.mutedStartPoints[muteIndex];
+//                auto end = loop.mutedEndPoints[muteIndex];
+//                if (indexPoint == start + fadeSize) {
+//                    muteVolume = 0;
+//                } else if (indexPoint == end + fadeSize) {
+//                    muteVolume = 1;
+//                    muteIndex++;
+//                } else if (indexPoint > start && indexPoint < start + fadeSize) {
+//                    muteVolume = 1.0 - ((indexPoint - start) / fadeSize);
+//                } else if (indexPoint > start + fadeSize && indexPoint > end && indexPoint < end + fadeSize) {
+//                    muteVolume = ((indexPoint - end) / fadeSize);
+//                }
+//            }
+
+            auto finalGain = gain * (loop.phaseInvert ? -1 : 1) * muteVolume;
             
-            auto fadeSize = (int)sampleBuffer->sampleRate / 100;
-            if (muteIndex < loop.mutedCount) {
-                auto start = loop.mutedStartPoints[muteIndex] + loop.loopStartPoint;
-                auto end = loop.mutedEndPoints[muteIndex] + loop.loopStartPoint;
-                if (indexPoint == start + fadeSize) {
-                    muteVolume = 0;
-                } else if (indexPoint == end + fadeSize) {
-                    muteVolume = 1;
-                    muteIndex++;
-                } else if (indexPoint > start && indexPoint < start + fadeSize) {
-                    muteVolume = 1.0 - ((indexPoint - start) / fadeSize);
-                } else if (indexPoint > start + fadeSize && indexPoint > end && indexPoint < end + fadeSize) {
-                    muteVolume = ((indexPoint - end) / fadeSize);
-                }
-            }
-            
-            if (indexPoint <= loop.loopStartPoint + fadeSize) {
-                fadeGain = (indexPoint - loop.loopStartPoint) / fadeSize;
-            } else if (indexPoint >= loop.loopEndPoint - fadeSize) {
-                fadeGain = 1.0 - ((indexPoint - (loop.loopEndPoint - fadeSize)) / fadeSize);
-            }
-            
-            *leftOutput = 0;
-            *rightOutput = 0;
-            
-            auto finalGain = gain * muteVolume * fadeGain;
-            
-            if (finalGain > 0) {
-                float left = 0, right = 0;
-                auto reversedIndex = loop.loopEndPoint - (indexPoint - loop.loopStartPoint);
-                sampleBuffers.interp(loop.reversed ? reversedIndex : indexPoint, &left, &right);
-                if (loop.phaseInvert) {
-                    *leftOutput += left * -1 * finalGain;
-                    *rightOutput += right * -1 * finalGain;
-                } else {
-                    *leftOutput += left * finalGain;
-                    *rightOutput += right * finalGain;
-                }
-            }
-            
-            indexPoint += multiplier * increment;
-            if (loop.isLooping && isLooping)
-            {
-                if (indexPoint >= loopEndPoint) {
-                    indexPoint = indexPoint - loopEndPoint + loop.loopStartPoint;
-                    muteIndex = 0;
-                }
+            float left = 0, right = 0;
+            sampleBuffers.interp(&left, &right, &indexPoint, increment, multiplier, loop);
+
+            *leftOutput = left * finalGain;
+            *rightOutput = right * finalGain;
+
+            if (loop.isLooping && isLooping && indexPoint == 0) {
+                muteIndex = 0;
             }
             return false;
         }

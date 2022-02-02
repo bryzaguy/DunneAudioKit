@@ -382,8 +382,8 @@ void SamplerDSP::handleMIDIEvent(const AUMIDIEvent &midiEvent)
             if (note > 127 || veloc > 127) break;
             prepareNote(note, veloc, {
                 .isLooping = true,
-                .loopStartPoint = 0,
-                .loopEndPoint = 0
+                .startPoint = 0,
+                .endPoint = 0
             });
             break;
         }
@@ -450,6 +450,9 @@ void SamplerDSP::process(FrameRange range)
         outBuffers[0] = (float *)outputBufferList->mBuffers[0].mData + frameOffset;
         outBuffers[1] = (float *)outputBufferList->mBuffers[1].mData + frameOffset;
         unsigned channelCount = outputBufferList->mNumberBuffers;
+        
+        memset(outBuffers[0], 0, CORESAMPLER_CHUNKSIZE * sizeof(float));
+        memset(outBuffers[1], 0, CORESAMPLER_CHUNKSIZE * sizeof(float));
         
         CoreSampler::render(channelCount, chunkSize, outBuffers, now + frameOffset);
     }
