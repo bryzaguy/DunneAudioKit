@@ -47,6 +47,7 @@ namespace DunneCore
 //        options |= RubberBand::RubberBandStretcher::OptionWindowLong;
 //        options |= RubberBand::RubberBandStretcher::OptionDetectorCompound;
         options |= RubberBand::RubberBandStretcher::OptionProcessRealTime;
+        options |= RubberBand::RubberBandStretcher::OptionPitchHighQuality;
 //        options |= RubberBand::RubberBandStretcher::OptionTransientsMixed;
 //        options |= RubberBand::RubberBandStretcher::OptionPhaseIndependent;
 //        options |= RubberBand::RubberBandStretcher::OptionThreadingNever;

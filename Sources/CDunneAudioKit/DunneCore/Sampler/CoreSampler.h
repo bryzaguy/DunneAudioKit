@@ -117,7 +117,7 @@ protected:
     
     // performance parameters
     float masterVolume, pitchOffset, vibratoDepth, vibratoFrequency,
-    voiceVibratoDepth, voiceVibratoFrequency, glideRate;
+    voiceVibratoDepth, voiceVibratoFrequency, glideRate, speed, pitch, varispeed;
     
     // parameters for mono-mode only
     

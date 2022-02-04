@@ -13,6 +13,9 @@ struct SamplerDSP : DSPBase, CoreSampler
     // ramped parameters
     LinearParameterRamp masterVolumeRamp;
     LinearParameterRamp pitchBendRamp;
+    LinearParameterRamp speedRamp;
+    LinearParameterRamp varispeedRamp;
+    LinearParameterRamp pitchRamp;
     LinearParameterRamp vibratoDepthRamp;
     LinearParameterRamp vibratoFrequencyRamp;
     LinearParameterRamp voiceVibratoDepthRamp;
@@ -141,6 +144,9 @@ SamplerDSP::SamplerDSP() : CoreSampler()
 {
     masterVolumeRamp.setTarget(1.0, true);
     pitchBendRamp.setTarget(0.0, true);
+    speedRamp.setTarget(0.0, true);
+    varispeedRamp.setTarget(0.0, true);
+    pitchRamp.setTarget(0.0, true);
     vibratoDepthRamp.setTarget(0.0, true);
     vibratoFrequencyRamp.setTarget(5.0, true);
     voiceVibratoDepthRamp.setTarget(0.0, true);
@@ -170,6 +176,9 @@ void SamplerDSP::setParameter(AUParameterAddress address, float value, bool imme
         case SamplerParameterRampDuration:
             masterVolumeRamp.setRampDuration(value, sampleRate);
             pitchBendRamp.setRampDuration(value, sampleRate);
+            speedRamp.setRampDuration(value, sampleRate);
+            varispeedRamp.setRampDuration(value, sampleRate);
+            pitchRamp.setRampDuration(value, sampleRate);
             vibratoDepthRamp.setRampDuration(value, sampleRate);
             vibratoFrequencyRamp.setRampDuration(value, sampleRate);
             voiceVibratoDepthRamp.setRampDuration(value, sampleRate);
@@ -186,6 +195,15 @@ void SamplerDSP::setParameter(AUParameterAddress address, float value, bool imme
             break;
         case SamplerParameterPitchBend:
             pitchBendRamp.setTarget(value, immediate);
+            break;
+        case SamplerParameterSpeed:
+            speedRamp.setTarget(value, immediate);
+            break;
+        case SamplerParameterVarispeed:
+            varispeedRamp.setTarget(value, immediate);
+            break;
+        case SamplerParameterPitch:
+            pitchRamp.setTarget(value, immediate);
             break;
         case SamplerParameterVibratoDepth:
             vibratoDepthRamp.setTarget(value, immediate);
@@ -295,6 +313,12 @@ float SamplerDSP::getParameter(AUParameterAddress address)
             return masterVolumeRamp.getTarget();
         case SamplerParameterPitchBend:
             return pitchBendRamp.getTarget();
+        case SamplerParameterSpeed:
+            return speedRamp.getTarget();
+        case SamplerParameterVarispeed:
+            return varispeedRamp.getTarget();
+        case SamplerParameterPitch:
+            return pitchRamp.getTarget();
         case SamplerParameterVibratoDepth:
             return vibratoDepthRamp.getTarget();
         case SamplerParameterVibratoFrequency:
@@ -424,6 +448,12 @@ void SamplerDSP::process(FrameRange range)
         masterVolume = (float)masterVolumeRamp.getValue();
         pitchBendRamp.advanceTo(now + frameOffset);
         pitchOffset = (float)pitchBendRamp.getValue();
+        varispeedRamp.advanceTo(now + frameOffset);
+        varispeed = (float)varispeedRamp.getValue();
+        speedRamp.advanceTo(now + frameOffset);
+        speed = (float)speedRamp.getValue();
+        pitchRamp.advanceTo(now + frameOffset);
+        pitch = (float)pitchRamp.getValue();
         vibratoDepthRamp.advanceTo(now + frameOffset);
         vibratoDepth = (float)vibratoDepthRamp.getValue();
         vibratoFrequencyRamp.advanceTo(now + frameOffset);
@@ -461,6 +491,9 @@ void SamplerDSP::process(FrameRange range)
 AK_REGISTER_DSP(SamplerDSP, "samp")
 AK_REGISTER_PARAMETER(SamplerParameterMasterVolume)
 AK_REGISTER_PARAMETER(SamplerParameterPitchBend)
+AK_REGISTER_PARAMETER(SamplerParameterSpeed)
+AK_REGISTER_PARAMETER(SamplerParameterVarispeed)
+AK_REGISTER_PARAMETER(SamplerParameterPitch)
 AK_REGISTER_PARAMETER(SamplerParameterVibratoDepth)
 AK_REGISTER_PARAMETER(SamplerParameterVibratoFrequency)
 AK_REGISTER_PARAMETER(SamplerParameterVoiceVibratoDepth)

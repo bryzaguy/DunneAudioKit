@@ -42,6 +42,42 @@ public class Sampler: Node {
     /// Pitch offset (semitones)
     @Parameter(pitchBendDef) public var pitchBend: AUValue
 
+    /// Specification details for pitchBend
+    public static let varispeedDef = NodeParameterDef(
+        identifier: "varispeed",
+        name: "Pitch bend (semitones)",
+        address: akGetParameterAddress("SamplerParameterVarispeed"),
+        defaultValue: 0.0,
+        range: -48 ... 48,
+        unit: .relativeSemiTones)
+
+    /// Pitch offset (semitones)
+    @Parameter(varispeedDef) public var varispeed: AUValue
+
+    /// Specification details for pitchBend
+    public static let speedDef = NodeParameterDef(
+        identifier: "speed",
+        name: "Pitch bend (semitones)",
+        address: akGetParameterAddress("SamplerParameterSpeed"),
+        defaultValue: 0.0,
+        range: -24 ... 24,
+        unit: .relativeSemiTones)
+
+    /// Pitch offset (semitones)
+    @Parameter(speedDef) public var speed: AUValue
+
+    /// Specification details for pitchBend
+    public static let pitchDef = NodeParameterDef(
+        identifier: "pitch",
+        name: "Pitch bend (semitones)",
+        address: akGetParameterAddress("SamplerParameterPitch"),
+        defaultValue: 0.0,
+        range: -24 ... 24,
+        unit: .relativeSemiTones)
+
+    /// Pitch offset (semitones)
+    @Parameter(pitchDef) public var pitch: AUValue
+
     /// Specification details for vibratoDepth
     public static let vibratoDepthDef = NodeParameterDef(
         identifier: "vibratoDepth",

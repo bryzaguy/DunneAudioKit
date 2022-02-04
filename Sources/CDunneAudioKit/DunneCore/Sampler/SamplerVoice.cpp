@@ -202,7 +202,7 @@ namespace DunneCore
                                         float cutoffMultiple, float keyTracking,
                                         float cutoffEnvelopeStrength, float cutoffEnvelopeVelocityScaling,
                                         float resLinear, float pitchADSRSemitones,
-                                        float voiceLFODepthSemitones, float voiceLFOFrequencyHz)
+                                        float voiceLFODepthSemitones, float voiceLFOFrequencyHz, float speed, float pitch, float varispeed)
     {
         if (ampEnvelope.isIdle()) return true;
 
@@ -246,6 +246,18 @@ namespace DunneCore
                 glideSemitones -= semitones;
                 if (glideSemitones < 0.0f) glideSemitones = 0.0f;
             }
+        }
+        
+        auto newVarispeed = 1 / ((varispeed + 24) / 24);
+        
+        auto newSpeed = std::max<float>(1 / ((speed + 24) / 24), 1 / 24) * newVarispeed;
+        if (sampleBuffers.stretcher->getTimeRatio() != newSpeed) {
+            sampleBuffers.stretcher->setTimeRatio(newSpeed);
+        }
+
+        auto newPitch = std::max<float>((pitch + 24) / 24, 1 / 24) * (1 / newVarispeed);
+        if (sampleBuffers.stretcher->getPitchScale() != newPitch) {
+            sampleBuffers.stretcher->setPitchScale(newPitch);
         }
 
         float pitchCurveAmount = 1.0f; // >1 = faster curve, 0 < curve < 1 = slower curve - make this a parameter

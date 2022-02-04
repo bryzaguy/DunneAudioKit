@@ -414,7 +414,7 @@ void CoreSampler::renderVoice(bool allowSampleRunout, float cutoffMul, float *pO
         if (stoppingAllVoices ||
             pVoice->prepToGetSamples(sampleCount, masterVolume, pitchDev, cutoffMul, keyTracking,
                                      cutoffEnvelopeStrength, filterEnvelopeVelocityScaling, linearResonance,
-                                     pitchADSRSemitones, voiceVibratoDepth, voiceVibratoFrequency) ||
+                                     pitchADSRSemitones, voiceVibratoDepth, voiceVibratoFrequency, speed, pitch, varispeed) ||
             (pVoice->getSamples(sampleCount, pOutLeft, pOutRight) && allowSampleRunout))
         {
             stopNote(nn, true);

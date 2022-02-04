@@ -176,7 +176,10 @@ namespace DunneCore
                               float resLinear,
                               float pitchADSRSemitones,
                               float voiceLFOFrequencyHz,
-                              float voiceLFODepthSemitones);
+                              float voiceLFODepthSemitones,
+                              float speed,
+                              float pitch,
+                              float varispeed);
 
         bool getSamples(int sampleCount, float *leftOutput, float *rightOutput);
 
