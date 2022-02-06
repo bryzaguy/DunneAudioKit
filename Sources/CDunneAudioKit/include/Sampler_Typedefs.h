@@ -7,7 +7,7 @@
 typedef struct
 {
     bool isLooping, reversed, phaseInvert;
-    float pitch, speed, rate;
+    float pitch, speed, varispeed;
     unsigned int startPoint, endPoint,
         enabledTracksCount, *enabledTracks,
         mutedCount, *mutedStartPoints, *mutedEndPoints;

@@ -34,6 +34,27 @@ namespace DunneCore
         samples = 0;
     }
 
+    std::tuple<float, float> SampleBufferGroup::convert(float speed, float pitch, float varispeed) {
+        auto newVarispeed = std::min<float>(std::max<float>(1 / ((varispeed + 24) / 24), 1.0f / 24.0f), 48);
+        auto newSpeed = std::min<float>(std::max<float>((1 / ((speed + 24) / 24)) * newVarispeed, 1.0f / 24.0f), 48);
+        auto newPitch = std::min<float>(std::max<float>(((pitch + 24) / 24) * (1 / newVarispeed), 1.0f / 24.0f), 48);
+        return std::make_tuple(newSpeed, newPitch);
+    }
+
+    void SampleBufferGroup::update(float speed, float pitch, float varispeed) {
+        auto converted = convert(speed, pitch, varispeed);
+        auto newSpeed = std::get<0>(converted);
+        auto newPitch = std::get<1>(converted);
+        
+        if (stretcher->getTimeRatio() != newSpeed) {
+            stretcher->setTimeRatio(newSpeed);
+        }
+
+        if (stretcher->getPitchScale() != newPitch) {
+            stretcher->setPitchScale(newPitch);
+        }
+    }
+
     void SampleBufferGroup::init(std::list<SampleBuffer*> buffers, LoopDescriptor loop) {
         if (buffers.size() == 0) return;
         
@@ -41,32 +62,23 @@ namespace DunneCore
         auto buffer = buffers.front();
         auto sampleRate = buffer->sampleRate;
         
-        *ratio = 1 / loop.speed;
+        auto converted = convert(loop.speed, loop.pitch, loop.varispeed);
+        auto ratio = std::get<0>(converted);
+        auto pitch = std::get<1>(converted);
 
         RubberBand::RubberBandStretcher::Options options = 0;
-//        options |= RubberBand::RubberBandStretcher::OptionWindowLong;
-//        options |= RubberBand::RubberBandStretcher::OptionDetectorCompound;
         options |= RubberBand::RubberBandStretcher::OptionProcessRealTime;
-        options |= RubberBand::RubberBandStretcher::OptionPitchHighQuality;
-//        options |= RubberBand::RubberBandStretcher::OptionTransientsMixed;
-//        options |= RubberBand::RubberBandStretcher::OptionPhaseIndependent;
-//        options |= RubberBand::RubberBandStretcher::OptionThreadingNever;
-//        options |= RubberBand::RubberBandStretcher::OptionSmoothingOn;
+        options |= RubberBand::RubberBandStretcher::OptionChannelsTogether;
         options |= RubberBand::RubberBandStretcher::OptionStretchPrecise;
         
-        stretcher = new RubberBand::RubberBandStretcher(sampleRate, 2, options, *ratio, 1.0);
-        
-        *sampleCount = loop.endPoint - loop.startPoint;
-        *windowSize = stretcher->getSamplesRequired();
-        auto padding = *windowSize - (*sampleCount % *windowSize);
-        auto count = *paddedCount = (int)padding + *sampleCount;
-        *scaledCount = *sampleCount * *ratio;
-        *scaledPaddedCount = *paddedCount * *ratio;
+        stretcher = new RubberBand::RubberBandStretcher(sampleRate, 2, options, 4, pitch);
 
-        scaledSamples[0] = new float [*scaledPaddedCount];
-        scaledSamples[1] = new float [*scaledPaddedCount];
-        memset(scaledSamples[0], 0, *scaledPaddedCount * sizeof(float));
-        memset(scaledSamples[1], 0, *scaledPaddedCount * sizeof(float));
+        auto count = *sampleCount = loop.endPoint - loop.startPoint;
+
+        scaledSamples[0] = new float [1];
+        scaledSamples[1] = new float [1];
+        memset(scaledSamples[0], 0, sizeof(float));
+        memset(scaledSamples[1], 0, sizeof(float));
         
         float **samples = new float *[2];
         samples[0] = new float[count];
@@ -86,14 +98,11 @@ namespace DunneCore
                 vDSP_vadd(samples[1], stride, &buffer->samples[buffer->sampleCount + loop.startPoint], stride, samples[1], stride, length);
             }
         }
-
+     
         if (loop.reversed) {
             vDSP_vrvrs(samples[0], stride, length);
             vDSP_vrvrs(samples[1], stride, length);
         }
-
-        fade(samples[0], 100, buffer->sampleRate);
-        fade(samples[1], 100, buffer->sampleRate);
 
         channelSamples = samples;
     }

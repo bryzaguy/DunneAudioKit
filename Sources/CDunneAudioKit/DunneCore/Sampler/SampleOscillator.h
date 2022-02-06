@@ -15,7 +15,7 @@ namespace DunneCore
         double indexPoint;  // use double so we don't lose precision when indexPoint becomes much larger than increment
         double increment;   // 1.0 = play at original speed
         double multiplier;  // multiplier applied to increment for pitch bend, vibrato
-        double muteVolume = 1;
+        double muteVolume = 0;
         unsigned int muteIndex = 0;
         double fadeGain = 0;
 
@@ -30,21 +30,23 @@ namespace DunneCore
                 return true;
             }
 
-//            auto fadeSize = (int)sampleBuffer->sampleRate / 100;
-//            if (muteIndex < loop.mutedCount) {
-//                auto start = loop.mutedStartPoints[muteIndex];
-//                auto end = loop.mutedEndPoints[muteIndex];
-//                if (indexPoint == start + fadeSize) {
-//                    muteVolume = 0;
-//                } else if (indexPoint == end + fadeSize) {
-//                    muteVolume = 1;
-//                    muteIndex++;
-//                } else if (indexPoint > start && indexPoint < start + fadeSize) {
-//                    muteVolume = 1.0 - ((indexPoint - start) / fadeSize);
-//                } else if (indexPoint > start + fadeSize && indexPoint > end && indexPoint < end + fadeSize) {
-//                    muteVolume = ((indexPoint - end) / fadeSize);
-//                }
-//            }
+            auto fadeSize = (int)sampleBuffer->sampleRate / 100;
+            if (muteIndex < loop.mutedCount) {
+                auto start = loop.mutedStartPoints[muteIndex];
+                auto end = loop.mutedEndPoints[muteIndex];
+                if (indexPoint == start + fadeSize) {
+                    muteVolume = 0;
+                } else if (indexPoint == end + fadeSize) {
+                    muteVolume = 1;
+                    muteIndex++;
+                } else if (indexPoint > start && indexPoint < start + fadeSize) {
+                    muteVolume = 1.0 - ((indexPoint - start) / fadeSize);
+                } else if (indexPoint > start + fadeSize && indexPoint > end && indexPoint < end + fadeSize) {
+                    muteVolume = ((indexPoint - end) / fadeSize);
+                }
+            } else {
+                muteVolume = 1;
+            }
 
             auto finalGain = gain * (loop.phaseInvert ? -1 : 1) * muteVolume;
             

@@ -247,19 +247,9 @@ namespace DunneCore
                 if (glideSemitones < 0.0f) glideSemitones = 0.0f;
             }
         }
-        
-        auto newVarispeed = 1 / ((varispeed + 24) / 24);
-        
-        auto newSpeed = std::max<float>(1 / ((speed + 24) / 24), 1 / 24) * newVarispeed;
-        if (sampleBuffers.stretcher->getTimeRatio() != newSpeed) {
-            sampleBuffers.stretcher->setTimeRatio(newSpeed);
-        }
 
-        auto newPitch = std::max<float>((pitch + 24) / 24, 1 / 24) * (1 / newVarispeed);
-        if (sampleBuffers.stretcher->getPitchScale() != newPitch) {
-            sampleBuffers.stretcher->setPitchScale(newPitch);
-        }
-
+        sampleBuffers.update(speed, pitch, varispeed);
+        
         float pitchCurveAmount = 1.0f; // >1 = faster curve, 0 < curve < 1 = slower curve - make this a parameter
         if (pitchCurveAmount < 0) { pitchCurveAmount = 0; }
         pitchEnvelopeSemitones = pow(pitchEnvelope.getSample(), pitchCurveAmount) * pitchADSRSemitones;
