@@ -71,14 +71,12 @@ namespace DunneCore
         options |= RubberBand::RubberBandStretcher::OptionChannelsTogether;
         options |= RubberBand::RubberBandStretcher::OptionStretchPrecise;
         
-        stretcher = new RubberBand::RubberBandStretcher(sampleRate, 2, options, 4, pitch);
+        stretcher = new RubberBand::RubberBandStretcher(sampleRate, 2, options, ratio, pitch);
 
         auto count = *sampleCount = loop.endPoint - loop.startPoint;
 
-        scaledSamples[0] = new float [1];
-        scaledSamples[1] = new float [1];
-        memset(scaledSamples[0], 0, sizeof(float));
-        memset(scaledSamples[1], 0, sizeof(float));
+        scaledSamples[0] = new float [1] {0};
+        scaledSamples[1] = new float [1] {0};
         
         float **samples = new float *[2];
         samples[0] = new float[count];
