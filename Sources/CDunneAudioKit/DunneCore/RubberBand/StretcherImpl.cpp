@@ -524,7 +524,7 @@ RubberBandStretcher::Impl::calculateSizes()
     // m_fftSize can be almost anything, but it can't be greater than
     // 4 * m_baseFftSize unless ratio is less than 1/1024.
 
-    m_fftSize = windowSize;
+    m_fftSize = 2048;//windowSize;
     
     if (m_options & OptionSmoothingOn) {
         m_aWindowSize = windowSize * 2;
@@ -561,7 +561,7 @@ RubberBandStretcher::Impl::calculateSizes()
     if (m_realtime) {
         // This headroom is so as to try to avoid reallocation when
         // the pitch scale changes
-        m_outbufSize = m_outbufSize * 16;
+        m_outbufSize = m_outbufSize * 24;
     } else {
 #ifndef NO_THREADING
         if (m_threaded) {
@@ -616,7 +616,7 @@ RubberBandStretcher::Impl::configure()
         windowSizes.insert(m_baseFftSize);
         windowSizes.insert(m_baseFftSize / 2);
         windowSizes.insert(m_baseFftSize * 2);
-//        windowSizes.insert(m_baseFftSize * 4);
+        windowSizes.insert(m_baseFftSize * 4);
     }
     windowSizes.insert(m_fftSize);
     windowSizes.insert(m_aWindowSize);
@@ -673,19 +673,20 @@ RubberBandStretcher::Impl::configure()
             if (m_channelData[c]->resampler) continue;
 
             Resampler::Parameters params;
-            params.quality = Resampler::FastestTolerable;
+            params.quality = Resampler::Fastest;
             params.maxBufferSize = 4096 * 16;
             params.debugLevel = m_debugLevel;
+            params.initialSampleRate = m_sampleRate;
             
             m_channelData[c]->resampler = new Resampler(params, 1);
 
             // rbs is the amount of buffer space we think we'll need
             // for resampling; but allocate a sensible amount in case
             // the pitch scale changes during use
-            size_t rbs = 
-                lrintf(ceil((m_increment * m_timeRatio * 2) / m_pitchScale));
-            if (rbs < m_increment * 16) rbs = m_increment * 16;
-            m_channelData[c]->setResampleBufSize(rbs);
+//            size_t rbs = 
+//                lrintf(ceil((m_increment * m_timeRatio * 2) / m_pitchScale));
+//            if (rbs < m_increment * 16) rbs = m_increment * 16;
+            m_channelData[c]->setResampleBufSize(42888);
         }
     }
     
@@ -817,16 +818,16 @@ RubberBandStretcher::Impl::reconfigure()
             std::cerr << "WARNING: reconfigure(): resampler construction required in RT mode" << std::endl;
 
             Resampler::Parameters params;
-            params.quality = Resampler::FastestTolerable;
+            params.quality = Resampler::Fastest;
             params.maxBufferSize = m_sWindowSize;
             params.debugLevel = m_debugLevel;
             
             m_channelData[c]->resampler = new Resampler(params, 1);
 
-            size_t rbs = 
-                lrintf(ceil((m_increment * m_timeRatio * 2) / m_pitchScale));
-            if (rbs < m_increment * 16) rbs = m_increment * 16;
-            m_channelData[c]->setResampleBufSize(rbs);
+//            size_t rbs =
+//                lrintf(ceil((m_increment * m_timeRatio * 2) / m_pitchScale));
+//            if (rbs < m_increment * 16) rbs = m_increment * 16;
+            m_channelData[c]->setResampleBufSize(42888);
         }
     }
 
