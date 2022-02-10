@@ -673,7 +673,7 @@ RubberBandStretcher::Impl::configure()
             if (m_channelData[c]->resampler) continue;
 
             Resampler::Parameters params;
-            params.quality = Resampler::Fastest;
+            params.quality = Resampler::FastestTolerable;
             params.maxBufferSize = 4096 * 16;
             params.debugLevel = m_debugLevel;
             params.initialSampleRate = m_sampleRate;
@@ -818,7 +818,7 @@ RubberBandStretcher::Impl::reconfigure()
             std::cerr << "WARNING: reconfigure(): resampler construction required in RT mode" << std::endl;
 
             Resampler::Parameters params;
-            params.quality = Resampler::Fastest;
+            params.quality = Resampler::FastestTolerable;
             params.maxBufferSize = m_sWindowSize;
             params.debugLevel = m_debugLevel;
             

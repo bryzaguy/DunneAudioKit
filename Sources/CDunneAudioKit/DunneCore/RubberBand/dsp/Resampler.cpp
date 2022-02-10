@@ -21,7 +21,8 @@
     you must obtain a valid commercial licence before doing so.
 */
 
-#define USE_SPEEX 1
+#define HAVE_LIBSAMPLERATE 1
+#define USE_SPEEX 0
 
 #include "Resampler.h"
 #include "../base/Profiler.h"
@@ -45,7 +46,7 @@
 #endif
 
 #ifdef HAVE_LIBSAMPLERATE
-#include <samplerate.h>
+#include "../libsamplerate/include/samplerate.h"
 #endif
 
 #ifdef HAVE_LIBRESAMPLE
