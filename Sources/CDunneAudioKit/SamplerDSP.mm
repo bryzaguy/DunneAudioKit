@@ -25,6 +25,7 @@ struct SamplerDSP : DSPBase, CoreSampler
     LinearParameterRamp filterResonanceRamp;
     LinearParameterRamp pitchADSRSemitonesRamp;
     LinearParameterRamp glideRateRamp;
+    int identity = -1;
 
     SamplerDSP();
     void init(int channelCount, double sampleRate) override;
@@ -116,6 +117,7 @@ void akSamplerPlayNote(DSPRef pDSP, int64_t sampleTime)
 
 void akSamplerPrepareNote(DSPRef pDSP, UInt8 noteNumber, UInt8 velocity, LoopDescriptor loop)
 {
+    ((SamplerDSP*)pDSP)->identity = noteNumber;
     ((SamplerDSP*)pDSP)->prepareNote(noteNumber, velocity, loop);
 }
 

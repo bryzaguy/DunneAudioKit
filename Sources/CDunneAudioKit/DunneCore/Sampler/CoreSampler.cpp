@@ -439,8 +439,8 @@ void CoreSampler::render(unsigned channelCount, unsigned sampleCount, float *out
 
         auto nextTime = pVoice->next.sampleTime;
 
-        if (pVoice->next.state == DunneCore::PlayEvent::CREATED && nextTime >= now && nextTime < (now + sampleCount)) {
-            auto offset = (unsigned int)(nextTime - now);
+        if (pVoice->next.state == DunneCore::PlayEvent::CREATED && nextTime >= now) {
+            auto offset = nextTime - now >= 0 || nextTime - now < sampleCount ? (unsigned int)(nextTime - now) : 0;
             if (offset > 0) {
                 renderVoice(allowSampleRunout, cutoffMul, pOutLeft, pOutRight, pVoice, pitchDev, offset);
 
@@ -448,6 +448,7 @@ void CoreSampler::render(unsigned channelCount, unsigned sampleCount, float *out
                 pOutRight += offset;
             }
 
+            pVoice->oscillator.indexPoint = double(size_t((now + offset) - nextTime) % *pVoice->sampleBuffers.sampleCount);
             pVoice->next.start();
             pVoice->next.state = DunneCore::PlayEvent::PLAYING;
             pVoice->current = pVoice->next;
